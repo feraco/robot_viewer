@@ -479,6 +479,32 @@ export class UIController {
     }
 
     /**
+     * Setup lighting toggle button
+     */
+    setupLightingToggle() {
+        const lightingBtn = document.getElementById('toggle-lighting');
+        if (!lightingBtn) {
+            return;
+        }
+
+        lightingBtn.addEventListener('click', () => {
+            const isChecked = lightingBtn.getAttribute('data-checked') === 'true';
+            const newState = !isChecked;
+
+            lightingBtn.setAttribute('data-checked', newState.toString());
+            if (newState) {
+                lightingBtn.classList.add('active');
+                this.sceneManager.visualizationManager.toggleEnhancedLighting(true);
+            } else {
+                lightingBtn.classList.remove('active');
+                this.sceneManager.visualizationManager.toggleEnhancedLighting(false);
+            }
+            this.sceneManager.redraw();
+            this.sceneManager.render();
+        });
+    }
+
+    /**
      * Setup all buttons and panels
      */
     setupAll(callbacks = {}) {
@@ -496,6 +522,7 @@ export class UIController {
         this.setupAxesToggle();
         this.setupJointAxesToggle();
         this.setupShadowToggle();
+        this.setupLightingToggle();
     }
 
     /**

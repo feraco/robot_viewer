@@ -1,6 +1,10 @@
+![screenshot](./docs/screenshot.png)
+
+---
+
 # Robot Viewer
 
-[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](https://github.com/fan-ziqi/robot_viewer)
+[![Version](https://img.shields.io/badge/version-v1.1.1-blue.svg)](https://github.com/fan-ziqi/robot_viewer)
 [![License](https://img.shields.io/badge/license-Apache--2.0-yellow.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-web-orange.svg)](https://github.com/fan-ziqi/robot_viewer)
 [![JavaScript](https://img.shields.io/badge/language-JavaScript-f1e05a.svg)](https://github.com/fan-ziqi/robot_viewer)
@@ -58,11 +62,6 @@ We welcome contributions from the community! Whether you're fixing bugs, adding 
 - **Bug Reports**: Open an [issue](https://github.com/fan-ziqi/robot_viewer/issues) with details
 - **Feature Requests**: Discuss ideas in [Discussions](https://github.com/fan-ziqi/robot_viewer/discussions)
 - **Pull Requests**: Submit PRs with clear descriptions and tests
-
-## Support
-
-- **Discussions**: Use [GitHub Discussions](https://github.com/fan-ziqi/robot_viewer/discussions) for questions and ideas
-- **Issues**: Report bugs and track features via [GitHub Issues](https://github.com/fan-ziqi/robot_viewer/issues)
 
 ## License
 

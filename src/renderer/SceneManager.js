@@ -77,6 +77,9 @@ export class SceneManager {
         this.environmentManager.setupLights();
         this.environmentManager.setupGroundPlane();
 
+        // Initialize environment map with renderer for reflections
+        this.environmentManager.initializeEnvironmentMap(this.renderer);
+
         // Keep references to ground and lights (compatibility)
         this.groundPlane = this.environmentManager.groundPlane;
         this.referenceGrid = this.environmentManager.referenceGrid;
@@ -273,14 +276,20 @@ export class SceneManager {
             });
         } else {
             // URDF/MJCF model: mesh files are loaded asynchronously, need to delay
+            // Multiple extractions to catch meshes loaded at different times
             setTimeout(() => {
                 this.visualizationManager.extractVisualAndCollision(model);
-                // Only adjust camera view after async loading completes (ensure all meshes loaded)
-                this.updateEnvironment(true);
+            }, 100);
 
-                // Trigger model ready event
+            setTimeout(() => {
+                this.visualizationManager.extractVisualAndCollision(model);
+                this.updateEnvironment(true);
                 this.emit('modelReady', model);
-            }, 1000); // URDF async mesh loading usually completes within 1 second
+            }, 1000);
+
+            setTimeout(() => {
+                this.visualizationManager.extractVisualAndCollision(model);
+            }, 2500);
         }
     }
 

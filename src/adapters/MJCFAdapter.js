@@ -41,6 +41,103 @@ export class MJCFAdapter {
             throw new Error('MJCF file missing worldbody element');
         }
 
+        // Parse geoms directly in worldbody (not inside any body element)
+        // These geoms belong to a special "worldbody" link
+        const worldbodyGeoms = worldbody.querySelectorAll(':scope > geom');
+        if (worldbodyGeoms.length > 0) {
+            const worldbodyLink = new Link('worldbody');
+            worldbodyLink.userData.isWorldbody = true;
+            const seenMeshes = new Set();
+
+            worldbodyGeoms.forEach((geomEl, geomIndex) => {
+                const group = geomEl.getAttribute('group');
+                const groupNum = group ? parseInt(group) : 0;
+                const geomName = (geomEl.getAttribute('name') || '').toLowerCase();
+                const hasRgba = geomEl.hasAttribute('rgba');
+                const meshRef = geomEl.getAttribute('mesh');
+                const contype = geomEl.getAttribute('contype');
+                const conaffinity = geomEl.getAttribute('conaffinity');
+                const density = geomEl.getAttribute('density');
+                const contypeNum = contype !== null ? parseInt(contype) : null;
+                const conaffinityNum = conaffinity !== null ? parseInt(conaffinity) : null;
+                const densityNum = density !== null ? parseFloat(density) : null;
+
+                // Determine if collision or visual (same logic as in parseBodies)
+                let isCollisionGeom = false;
+                if (!meshRef) {
+                    isCollisionGeom = true;
+                } else {
+                    if (contypeNum === 0 && conaffinityNum === 0) {
+                        isCollisionGeom = false;
+                    } else if (groupNum === 2) {
+                        isCollisionGeom = true;
+                    } else if (geomName.includes('collision')) {
+                        isCollisionGeom = true;
+                    } else if (seenMeshes.has(meshRef)) {
+                        if (hasRgba || (contypeNum === 0 && conaffinityNum === 0)) {
+                            return; // Skip duplicate visual
+                        } else {
+                            isCollisionGeom = true;
+                        }
+                    } else if (densityNum === 0 && groupNum === 1) {
+                        isCollisionGeom = false;
+                    } else if (hasRgba) {
+                        isCollisionGeom = false;
+                    } else {
+                        isCollisionGeom = false;
+                    }
+                }
+
+                const geom = this.parseGeom(geomEl, meshMap);
+                if (geom) {
+                    if (isCollisionGeom) {
+                        const collision = new CollisionGeometry();
+                        collision.geometry = geom;
+                        collision.name = geomEl.getAttribute('name') || `worldbody_collision_${geomIndex}`;
+                        collision.origin = this.parseOrigin(geomEl);
+                        worldbodyLink.collisions.push(collision);
+                    } else {
+                        if (meshRef) {
+                            seenMeshes.add(meshRef);
+                        }
+                        const visual = new VisualGeometry();
+                        visual.geometry = geom;
+                        visual.name = geomEl.getAttribute('name') || `worldbody_geom_${geomIndex}`;
+                        visual.origin = this.parseOrigin(geomEl);
+
+                        // Parse rgba
+                        let rgba = null;
+                        if (hasRgba) {
+                            const rgbaStr = geomEl.getAttribute('rgba');
+                            const rgbaVals = rgbaStr.split(' ').map(parseFloat);
+                            if (rgbaVals.length >= 3) {
+                                rgba = {
+                                    r: rgbaVals[0],
+                                    g: rgbaVals[1],
+                                    b: rgbaVals[2],
+                                    a: rgbaVals.length >= 4 ? rgbaVals[3] : 1.0
+                                };
+                            }
+                        }
+
+                        visual.userData = {
+                            group: groupNum,
+                            hasRgba: hasRgba || !!rgba,
+                            rgba: rgba,
+                            meshRef: meshRef,
+                            geomType: geomEl.getAttribute('type') || (meshRef ? 'mesh' : 'box')
+                        };
+                        worldbodyLink.visuals.push(visual);
+                    }
+                }
+            });
+
+            // Only add worldbody link if it has geometries
+            if (worldbodyLink.visuals.length > 0 || worldbodyLink.collisions.length > 0) {
+                model.addLink(worldbodyLink);
+            }
+        }
+
         // Parse all bodies (links), pass meshMap and materialMap
         const bodyMap = new Map();
         this.parseBodies(worldbody, null, bodyMap, model, null, meshMap, null, materialMap);
@@ -52,13 +149,19 @@ export class MJCFAdapter {
         this.parseEquality(doc, model);
 
         // Find root body
-        const rootBodies = Array.from(model.links.keys()).filter(
-            name => !Array.from(model.joints.values()).some(j => j.child === name)
-        );
-        if (rootBodies.length > 0) {
-            model.rootLink = rootBodies[0];
-        } else if (model.links.size > 0) {
-            model.rootLink = Array.from(model.links.keys())[0];
+        // Priority: worldbody link > bodies without parent joints > first link
+        const worldbodyLink = model.links.get('worldbody');
+        if (worldbodyLink) {
+            model.rootLink = 'worldbody';
+        } else {
+            const rootBodies = Array.from(model.links.keys()).filter(
+                name => !Array.from(model.joints.values()).some(j => j.child === name)
+            );
+            if (rootBodies.length > 0) {
+                model.rootLink = rootBodies[0];
+            } else if (model.links.size > 0) {
+                model.rootLink = Array.from(model.links.keys())[0];
+            }
         }
 
         // Create Three.js objects (asynchronously load mesh files)
@@ -290,6 +393,14 @@ export class MJCFAdapter {
                 const meshRef = geomEl.getAttribute('mesh');
                 const geomType = geomEl.getAttribute('type') || (meshRef ? 'mesh' : 'box');
 
+                // Check collision-related attributes
+                const contype = geomEl.getAttribute('contype');
+                const conaffinity = geomEl.getAttribute('conaffinity');
+                const density = geomEl.getAttribute('density');
+                const contypeNum = contype !== null ? parseInt(contype) : null;
+                const conaffinityNum = conaffinity !== null ? parseInt(conaffinity) : null;
+                const densityNum = density !== null ? parseFloat(density) : null;
+
                 // Determine geom type: visual or collision
                 let isCollisionGeom = false;
                 let skipReason = '';
@@ -302,26 +413,44 @@ export class MJCFAdapter {
                 } else {
                     // Has mesh reference, check if should be collision
 
-                    // Strategy 1: group=2 explicitly marked as collision
-                    if (groupNum === 2) {
+                    // Strategy 1: Explicitly disabled collision (contype="0" conaffinity="0") = visual only
+                    if (contypeNum === 0 && conaffinityNum === 0) {
+                        // This is explicitly marked as visual-only (no collision)
+                        isCollisionGeom = false;
+                    }
+                    // Strategy 2: group=2 explicitly marked as collision
+                    else if (groupNum === 2) {
                         isCollisionGeom = true;
                     }
-
-                    // Strategy 2: Name contains collision (indicates collision-specific)
-                    if (geomName.includes('collision')) {
+                    // Strategy 3: Name contains collision (indicates collision-specific)
+                    else if (geomName.includes('collision')) {
                         isCollisionGeom = true;
                     }
-
-                    // Strategy 3: If no rgba but same mesh already added, it's collision
-                    // (first with rgba is visual, second without rgba is collision)
-                    if (!hasRgba && seenMeshes.has(meshRef)) {
-                        isCollisionGeom = true;
+                    // Strategy 4: If same mesh already added as visual
+                    else if (seenMeshes.has(meshRef)) {
+                        // If current geom also has visual markers (rgba or contype="0"), skip duplicate visual
+                        if (hasRgba || (contypeNum === 0 && conaffinityNum === 0)) {
+                            stats.skippedCollisionGeoms++;
+                            return;
+                        } else {
+                            // Same mesh, but current geom has no visual markers - treat as collision
+                            isCollisionGeom = true;
+                        }
                     }
-
-                    // Strategy 4: If already added this mesh as visual and current is also visual, skip (avoid duplicates)
-                    if (hasRgba && seenMeshes.has(meshRef) && !isCollisionGeom) {
-                        stats.skippedCollisionGeoms++;
-                        return;
+                    // Strategy 5: If density="0" and group="1", likely visual-only (common pattern in MJCF)
+                    else if (densityNum === 0 && groupNum === 1) {
+                        // This pattern (density="0" group="1") is often used for visual-only geoms
+                        isCollisionGeom = false;
+                    }
+                    // Strategy 6: Default: if has rgba, treat as visual
+                    else if (hasRgba) {
+                        isCollisionGeom = false;
+                    }
+                    // Strategy 7: Default for mesh: treat as visual (for display purposes)
+                    else {
+                        // No explicit markers, but it's a mesh - default to visual for display
+                        // (collision might be handled by a separate geom with same mesh)
+                        isCollisionGeom = false;
                     }
                 }
 
@@ -419,9 +548,9 @@ export class MJCFAdapter {
             type = 'mesh';
         }
 
-        // If no type attribute and no mesh attribute, default to box
+        // If no type attribute and no mesh attribute, default to sphere
         if (!type) {
-            type = 'box';
+            type = 'sphere';
         }
 
         const geometry = new GeometryType(type);
@@ -785,6 +914,10 @@ export class MJCFAdapter {
 
             const joint = new Joint(jointName, urdfType);
 
+            // Joint types that don't require axis attribute
+            const jointTypesWithoutAxis = ['free', 'ball'];
+            const requiresAxis = !jointTypesWithoutAxis.includes(jointType);
+
             // [Critical fix] In MJCF, joint is defined inside body, representing the connection relationship between this body and its parent body
             // So: parent is parent body, child is current body
             const currentBody = jointEl.parentElement;
@@ -830,8 +963,9 @@ export class MJCFAdapter {
                     }
                 }
 
-                if (!axisVals) {
-                    console.warn(`  ⚠️ Joint "${jointName}" has no axis attribute (class="${className || 'none'}")`);
+                // Only warn if axis is required for this joint type
+                if (!axisVals && requiresAxis) {
+                    console.warn(`  ⚠️ Joint "${jointName}" (type="${jointType}") has no axis attribute (class="${className || 'none'}")`);
                 }
             }
 
@@ -1085,6 +1219,40 @@ export class MJCFAdapter {
                                             clonedMat.transparent = true;
                                             clonedMat.opacity = rgba.a;
                                         }
+                                        // Save original properties before enhancing (for lighting toggle)
+                                        if (clonedMat.isMeshPhongMaterial || clonedMat.isMeshStandardMaterial) {
+                                            if (clonedMat.userData.originalShininess === undefined) {
+                                                clonedMat.userData.originalShininess = clonedMat.shininess !== undefined ? clonedMat.shininess : 30;
+                                                // Save original specular - if material had no specular, save null
+                                                if (!clonedMat.specular) {
+                                                    clonedMat.userData.originalSpecular = null;
+                                                } else if (clonedMat.specular.isColor) {
+                                                    const spec = clonedMat.specular;
+                                                    if (spec.r < 0.1 && spec.g < 0.1 && spec.b < 0.1) {
+                                                        clonedMat.userData.originalSpecular = null; // Likely default
+                                                    } else {
+                                                        clonedMat.userData.originalSpecular = spec.clone();
+                                                    }
+                                                } else if (typeof clonedMat.specular === 'number') {
+                                                    if (clonedMat.specular === 0x111111 || clonedMat.specular < 0x111111) {
+                                                        clonedMat.userData.originalSpecular = null;
+                                                    } else {
+                                                        clonedMat.userData.originalSpecular = new THREE.Color(clonedMat.specular);
+                                                    }
+                                                } else {
+                                                    clonedMat.userData.originalSpecular = null;
+                                                }
+                                            }
+                                            // Enhance material for better lighting (MuJoCo style) - default enabled
+                                            if (clonedMat.shininess === undefined || clonedMat.shininess < 50) {
+                                                clonedMat.shininess = 50;
+                                            }
+                                            if (!clonedMat.specular ||
+                                                (clonedMat.specular.isColor && clonedMat.specular.r < 0.2) ||
+                                                (typeof clonedMat.specular === 'number' && clonedMat.specular < 0x333333)) {
+                                                clonedMat.specular = new THREE.Color(0.3, 0.3, 0.3);
+                                            }
+                                        }
                                         return clonedMat;
                                     });
                                 } else {
@@ -1094,6 +1262,40 @@ export class MJCFAdapter {
                                     if (rgba.a < 1.0) {
                                         child.material.transparent = true;
                                         child.material.opacity = rgba.a;
+                                    }
+                                    // Save original properties before enhancing (for lighting toggle)
+                                    if (child.material.isMeshPhongMaterial || child.material.isMeshStandardMaterial) {
+                                        if (child.material.userData.originalShininess === undefined) {
+                                            child.material.userData.originalShininess = child.material.shininess !== undefined ? child.material.shininess : 30;
+                                            // Save original specular - if material had no specular, save null
+                                            if (!child.material.specular) {
+                                                child.material.userData.originalSpecular = null;
+                                            } else if (child.material.specular.isColor) {
+                                                const spec = child.material.specular;
+                                                if (spec.r < 0.1 && spec.g < 0.1 && spec.b < 0.1) {
+                                                    child.material.userData.originalSpecular = null; // Likely default
+                                                } else {
+                                                    child.material.userData.originalSpecular = spec.clone();
+                                                }
+                                            } else if (typeof child.material.specular === 'number') {
+                                                if (child.material.specular === 0x111111 || child.material.specular < 0x111111) {
+                                                    child.material.userData.originalSpecular = null;
+                                                } else {
+                                                    child.material.userData.originalSpecular = new THREE.Color(child.material.specular);
+                                                }
+                                            } else {
+                                                child.material.userData.originalSpecular = null;
+                                            }
+                                        }
+                                        // Enhance material for better lighting (MuJoCo style) - default enabled
+                                        if (child.material.shininess === undefined || child.material.shininess < 50) {
+                                            child.material.shininess = 50;
+                                        }
+                                        if (!child.material.specular ||
+                                            (child.material.specular.isColor && child.material.specular.r < 0.2) ||
+                                            (typeof child.material.specular === 'number' && child.material.specular < 0x333333)) {
+                                            child.material.specular = new THREE.Color(0.3, 0.3, 0.3);
+                                        }
                                     }
                                 }
                             }
@@ -1354,11 +1556,18 @@ export class MJCFAdapter {
         if (!threeGeometry) return null;
 
         // Create default material for BufferGeometry (basic geometries: box, sphere, cylinder, stl, etc.)
+        // Enhanced for better lighting (MuJoCo style) with reflections
+        const envMap = typeof window !== 'undefined' && window.app?.sceneManager?.environmentManager?.getEnvironmentMap();
         const material = new THREE.MeshPhongMaterial({
             color: 0xf0f0f0,  // Near white
-            shininess: 30,
-            specular: 0x444444  // Moderate specular highlight
+            shininess: 50,  // Increased for better highlights
+            specular: new THREE.Color(0.3, 0.3, 0.3),  // Enhanced specular reflection
+            envMap: envMap || null,
+            reflectivity: envMap ? 0.3 : 0
         });
+        // Save original properties for lighting toggle
+        material.userData.originalShininess = 30;
+        material.userData.originalSpecular = null; // New material, no original specular
         return new THREE.Mesh(threeGeometry, material);
     }
 

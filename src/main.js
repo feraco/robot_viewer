@@ -228,8 +228,9 @@ class App {
         const fileExt = file.name.split('.').pop().toLowerCase();
         const isMJCF = fileExt === 'xml' && model?.userData?.type === 'mjcf';
 
-        // Clear MuJoCo simulation state if switching to non-MJCF file
-        if (!isMJCF && this.mujocoSimulationManager && this.mujocoSimulationManager.hasScene()) {
+        // Clear MuJoCo simulation state when switching files
+        if (this.mujocoSimulationManager && this.mujocoSimulationManager.hasScene()) {
+            // Always clear simulation when switching files (MJCF or non-MJCF)
             this.mujocoSimulationManager.clearScene();
         }
 
@@ -915,7 +916,7 @@ class App {
                 return true;
             } catch (error) {
                 console.error('MuJoCo scene loading failed:', error);
-                alert('Simulation startup failed: ' + error.message);
+                // Error details are already logged to console, no need for alert popup
                 return false;
             }
         }

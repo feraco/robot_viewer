@@ -15,27 +15,128 @@ export class VisualizationManager {
         this.showVisual = true;
         this.showCollision = false;
         this.showShadow = true;
+        this.showEnhancedLighting = true;  // Default: enhanced lighting enabled
     }
 
     /**
      * Extract visual and collision meshes from model
      */
     extractVisualAndCollision(model) {
-        // Clear previous mesh arrays
+        // Clear arrays only on first call to avoid duplicates on subsequent async calls
+        const isFirstCall = this.visualMeshes.length === 0;
+        if (!isFirstCall) {
+            // Subsequent call - only process newly loaded meshes
+            return this.processNewlyLoadedMeshes(model);
+        }
+
         this.visualMeshes = [];
         this.collisionMeshes = [];
         this.colliders = [];
 
         if (!model.threeObject) return;
-        // Step 1: Collect all colliders and apply current display state
+
+        // First pass: ensure all materials are properly set up (especially for DAE/STL files loaded asynchronously)
+        // This ensures materials have original properties saved AND enhanced lighting applied
         model.threeObject.traverse((child) => {
-            if (child.isURDFCollider) {
-                this.colliders.push(child);
-                child.visible = this.showCollision;
+            if (child.isMesh && child.material) {
+                const materials = Array.isArray(child.material) ? child.material : [child.material];
+                const processedMaterials = [];
+
+                materials.forEach((material, matIndex) => {
+                    if (!material) {
+                        processedMaterials.push(null);
+                        return;
+                    }
+
+                    // Convert MeshBasicMaterial or MeshLambertMaterial to MeshPhongMaterial
+                    if (material.type === 'MeshBasicMaterial' || material.type === 'MeshLambertMaterial') {
+                        const oldMaterial = material;
+                        const enhancedLighting = this.showEnhancedLighting;
+                        const envMap = this.sceneManager.environmentManager?.getEnvironmentMap();
+                        const newMaterial = new THREE.MeshPhongMaterial({
+                            color: oldMaterial.color,
+                            map: oldMaterial.map,
+                            transparent: oldMaterial.transparent,
+                            opacity: oldMaterial.opacity,
+                            side: oldMaterial.side,
+                            shininess: enhancedLighting ? 50 : 30,
+                            specular: enhancedLighting ? new THREE.Color(0.3, 0.3, 0.3) : new THREE.Color(0x111111),
+                            envMap: envMap || null,
+                            reflectivity: envMap ? 0.3 : 0
+                        });
+                        newMaterial.userData.originalShininess = 30;
+                        newMaterial.userData.originalSpecular = null;
+                        if (newMaterial.map) {
+                            newMaterial.map.colorSpace = THREE.SRGBColorSpace;
+                        }
+                        processedMaterials.push(newMaterial);
+                        material = newMaterial;
+                    } else {
+                        processedMaterials.push(material);
+                    }
+
+                    // Save original properties and apply enhanced lighting for all Phong/Standard materials
+                    if (material && (material.isMeshPhongMaterial || material.isMeshStandardMaterial)) {
+                        // Save original properties if not already saved
+                        if (material.userData.originalShininess === undefined) {
+                            material.userData.originalShininess = material.shininess !== undefined ? material.shininess : 30;
+                            if (!material.specular) {
+                                material.userData.originalSpecular = null;
+                            } else if (material.specular.isColor) {
+                                const spec = material.specular;
+                                if (spec.r < 0.1 && spec.g < 0.1 && spec.b < 0.1) {
+                                    material.userData.originalSpecular = null;
+                                } else {
+                                    material.userData.originalSpecular = spec.clone();
+                                }
+                            } else if (typeof material.specular === 'number') {
+                                if (material.specular === 0x111111 || material.specular < 0x111111) {
+                                    material.userData.originalSpecular = null;
+                                } else {
+                                    material.userData.originalSpecular = new THREE.Color(material.specular);
+                                }
+                            } else {
+                                material.userData.originalSpecular = null;
+                            }
+                        }
+
+                        // Apply enhanced lighting if enabled (this was missing!)
+                        if (this.showEnhancedLighting) {
+                            if (material.shininess === undefined || material.shininess < 50) {
+                                material.shininess = 50;
+                            }
+                            if (!material.specular ||
+                                (material.specular.isColor && material.specular.r < 0.2) ||
+                                (typeof material.specular === 'number' && material.specular < 0x333333)) {
+                                material.specular = new THREE.Color(0.3, 0.3, 0.3);
+                            }
+                            material.needsUpdate = true;
+                        }
+                    }
+                });
+
+                // Update mesh material (handle arrays)
+                if (Array.isArray(child.material)) {
+                    child.material = processedMaterials;
+                } else if (processedMaterials.length === 1 && processedMaterials[0]) {
+                    child.material = processedMaterials[0];
+                }
             }
         });
-        // Step 2: Process collider materials
-        this.colliders.forEach(collider => {
+
+        // Step 1: Collect all colliders and apply current display state
+        // Only collect colliders on first call
+        if (isFirstCall) {
+            model.threeObject.traverse((child) => {
+                if (child.isURDFCollider) {
+                    this.colliders.push(child);
+                    child.visible = this.showCollision;
+                }
+            });
+        }
+        // Step 2: Process collider materials (only on first call)
+        if (isFirstCall) {
+            this.colliders.forEach(collider => {
             collider.traverse((child) => {
                 if (child.isMesh) {
                     // Save original material
@@ -61,22 +162,14 @@ export class VisualizationManager {
                     // Disable raycasting for colliders (don't interfere with dragging)
                     child.raycast = () => {};
 
-                    this.collisionMeshes.push(child);
-                }
+                        this.collisionMeshes.push(child);
+                    }
+                });
             });
-        });
+        }
 
-        // Step 3: Collect all visual meshes
-        let skippedCount = 0;
-        let visualContainers = 0;
-
+        // Step 3: Collect all visual meshes (materials already processed in first pass)
         model.threeObject.traverse((child) => {
-            // Count URDFVisual containers
-            if (child.isURDFVisual) {
-                visualContainers++;
-            }
-
-            // Process Mesh objects
             if (child.isMesh || child.type === 'Mesh') {
                 // Check if self or parent is a collider
                 let isInCollider = false;
@@ -91,30 +184,133 @@ export class VisualizationManager {
 
                 // Only add non-collider meshes
                 if (!isInCollider) {
-                    // Convert MeshBasicMaterial to MeshPhongMaterial (supports lighting and shadows)
-                    if (child.material && child.material.type === 'MeshBasicMaterial') {
-                        const oldMaterial = child.material;
-                        child.material = new THREE.MeshPhongMaterial({
+                    child.castShadow = this.showShadow;
+                    child.receiveShadow = this.showShadow;
+                    child.visible = this.showVisual;
+                    this.visualMeshes.push(child);
+                }
+            }
+        });
+    }
+
+    /**
+     * Process newly loaded meshes (for subsequent async calls)
+     */
+    processNewlyLoadedMeshes(model) {
+        if (!model.threeObject) return;
+
+        // Process materials for all meshes (including newly loaded ones)
+        model.threeObject.traverse((child) => {
+            if (child.isMesh && child.material) {
+                const materials = Array.isArray(child.material) ? child.material : [child.material];
+                const processedMaterials = [];
+
+                materials.forEach((material, matIndex) => {
+                    if (!material) {
+                        processedMaterials.push(null);
+                        return;
+                    }
+
+                    // Convert MeshBasicMaterial or MeshLambertMaterial to MeshPhongMaterial
+                    if (material.type === 'MeshBasicMaterial' || material.type === 'MeshLambertMaterial') {
+                        const oldMaterial = material;
+                        const enhancedLighting = this.showEnhancedLighting;
+                        const envMap = this.sceneManager.environmentManager?.getEnvironmentMap();
+                        const newMaterial = new THREE.MeshPhongMaterial({
                             color: oldMaterial.color,
                             map: oldMaterial.map,
                             transparent: oldMaterial.transparent,
                             opacity: oldMaterial.opacity,
                             side: oldMaterial.side,
-                            shininess: 30
+                            shininess: enhancedLighting ? 50 : 30,
+                            specular: enhancedLighting ? new THREE.Color(0.3, 0.3, 0.3) : new THREE.Color(0x111111),
+                            envMap: envMap || null,
+                            reflectivity: envMap ? 0.3 : 0
                         });
-                        // Ensure correct color space for textures
-                        if (child.material.map) {
-                            child.material.map.colorSpace = THREE.SRGBColorSpace;
+                        newMaterial.userData.originalShininess = 30;
+                        newMaterial.userData.originalSpecular = null;
+                        if (newMaterial.map) {
+                            newMaterial.map.colorSpace = THREE.SRGBColorSpace;
                         }
+                        processedMaterials.push(newMaterial);
+                        material = newMaterial;
+                    } else {
+                        processedMaterials.push(material);
                     }
 
-                    // Force set shadow properties (according to current state)
+                    // Save original properties and apply enhanced lighting for Phong/Standard materials
+                    if (material && (material.isMeshPhongMaterial || material.isMeshStandardMaterial)) {
+                        if (material.userData.originalShininess === undefined) {
+                            material.userData.originalShininess = material.shininess !== undefined ? material.shininess : 30;
+                            if (!material.specular) {
+                                material.userData.originalSpecular = null;
+                            } else if (material.specular.isColor) {
+                                const spec = material.specular;
+                                if (spec.r < 0.1 && spec.g < 0.1 && spec.b < 0.1) {
+                                    material.userData.originalSpecular = null;
+                                } else {
+                                    material.userData.originalSpecular = spec.clone();
+                                }
+                            } else if (typeof material.specular === 'number') {
+                                if (material.specular === 0x111111 || material.specular < 0x111111) {
+                                    material.userData.originalSpecular = null;
+                                } else {
+                                    material.userData.originalSpecular = new THREE.Color(material.specular);
+                                }
+                            } else {
+                                material.userData.originalSpecular = null;
+                            }
+                        }
+
+                        // Apply environment map for reflections
+                        const envMap = this.sceneManager.environmentManager?.getEnvironmentMap();
+                        if (envMap && !material.envMap) {
+                            material.envMap = envMap;
+                            if (material.reflectivity === undefined) {
+                                material.reflectivity = 0.3;
+                            }
+                            material.needsUpdate = true;
+                        }
+
+                        if (this.showEnhancedLighting) {
+                            if (material.shininess === undefined || material.shininess < 50) {
+                                material.shininess = 50;
+                            }
+                            if (!material.specular ||
+                                (material.specular.isColor && material.specular.r < 0.2) ||
+                                (typeof material.specular === 'number' && material.specular < 0x333333)) {
+                                material.specular = new THREE.Color(0.3, 0.3, 0.3);
+                            }
+                            material.needsUpdate = true;
+                        }
+                    }
+                });
+
+                // Update mesh material
+                if (Array.isArray(child.material)) {
+                    child.material = processedMaterials;
+                } else if (processedMaterials.length === 1 && processedMaterials[0]) {
+                    child.material = processedMaterials[0];
+                }
+            }
+
+            // Add newly loaded visual meshes
+            if ((child.isMesh || child.type === 'Mesh') && !this.visualMeshes.includes(child)) {
+                let isInCollider = false;
+                let checkNode = child;
+                while (checkNode) {
+                    if (checkNode.isURDFCollider) {
+                        isInCollider = true;
+                        break;
+                    }
+                    checkNode = checkNode.parent;
+                }
+
+                if (!isInCollider) {
                     child.castShadow = this.showShadow;
                     child.receiveShadow = this.showShadow;
                     child.visible = this.showVisual;
                     this.visualMeshes.push(child);
-                } else {
-                    skippedCount++;
                 }
             }
         });
@@ -178,6 +374,281 @@ export class VisualizationManager {
         if (!show && directionalLight && directionalLight.shadow) {
             directionalLight.shadow.map?.dispose();
             directionalLight.shadow.map = null;
+        }
+    }
+
+    /**
+     * Toggle enhanced lighting (shininess and specular)
+     */
+    toggleEnhancedLighting(enable) {
+        this.showEnhancedLighting = enable;
+
+        // Process current model first (most comprehensive, covers all meshes including DAE files)
+        // This is critical because DAE files may have nested Groups and material arrays
+        if (this.sceneManager && this.sceneManager.currentModel && this.sceneManager.currentModel.threeObject) {
+            this.sceneManager.currentModel.threeObject.traverse((child) => {
+                if (child.isMesh && child.material && !this.collisionMeshes.includes(child)) {
+                    // Handle material arrays (common in DAE files with multiple materials)
+                    const materials = Array.isArray(child.material) ? child.material : [child.material];
+
+                    materials.forEach((material, matIndex) => {
+                        if (!material) return;
+
+                        // Convert MeshBasicMaterial or MeshLambertMaterial to MeshPhongMaterial
+                        if (material.type === 'MeshBasicMaterial' || material.type === 'MeshLambertMaterial') {
+                            const oldMaterial = material;
+                            const newMaterial = new THREE.MeshPhongMaterial({
+                                color: oldMaterial.color,
+                                map: oldMaterial.map,
+                                transparent: oldMaterial.transparent,
+                                opacity: oldMaterial.opacity,
+                                side: oldMaterial.side,
+                                shininess: enable ? 50 : 30,
+                                specular: enable ? new THREE.Color(0.3, 0.3, 0.3) : new THREE.Color(0x111111)
+                            });
+                            newMaterial.userData.originalShininess = 30;
+                            newMaterial.userData.originalSpecular = null;
+                            if (newMaterial.map) {
+                                newMaterial.map.colorSpace = THREE.SRGBColorSpace;
+                            }
+                            materials[matIndex] = newMaterial;
+                            material = newMaterial;
+                        }
+
+                        if (material && (material.isMeshPhongMaterial || material.isMeshStandardMaterial)) {
+                            // Save original properties if not already saved
+                            if (material.userData.originalShininess === undefined) {
+                                material.userData.originalShininess = material.shininess !== undefined ? material.shininess : 30;
+                                // Save original specular
+                                if (!material.specular) {
+                                    material.userData.originalSpecular = null;
+                                } else if (material.specular.isColor) {
+                                    const spec = material.specular;
+                                    if (spec.r < 0.1 && spec.g < 0.1 && spec.b < 0.1) {
+                                        material.userData.originalSpecular = null;
+                                    } else {
+                                        material.userData.originalSpecular = spec.clone();
+                                    }
+                                } else if (typeof material.specular === 'number') {
+                                    if (material.specular === 0x111111 || material.specular < 0x111111) {
+                                        material.userData.originalSpecular = null;
+                                    } else {
+                                        material.userData.originalSpecular = new THREE.Color(material.specular);
+                                    }
+                                } else {
+                                    material.userData.originalSpecular = null;
+                                }
+                            }
+
+                            if (enable) {
+                                // Apply enhanced lighting
+                                material.shininess = 50;
+                                if (!material.specular ||
+                                    (material.specular.isColor && material.specular.r < 0.2) ||
+                                    (typeof material.specular === 'number' && material.specular < 0x333333)) {
+                                    material.specular = new THREE.Color(0.3, 0.3, 0.3);
+                                }
+                            } else {
+                                // Restore original lighting
+                                if (material.userData.originalShininess !== undefined) {
+                                    material.shininess = material.userData.originalShininess;
+                                }
+                                if (material.userData.originalSpecular === null) {
+                                    material.specular = new THREE.Color(0x111111);
+                                } else if (material.userData.originalSpecular) {
+                                    const originalSpec = material.userData.originalSpecular;
+                                    if (originalSpec.isColor) {
+                                        material.specular = originalSpec.clone();
+                                    } else {
+                                        material.specular = originalSpec;
+                                    }
+                                }
+                            }
+                            material.needsUpdate = true;
+                        }
+                    });
+
+                    // Update mesh material (handle arrays)
+                    if (Array.isArray(child.material)) {
+                        child.material = materials;
+                        materials.forEach(mat => {
+                            if (mat) mat.needsUpdate = true;
+                        });
+                    } else if (materials.length === 1) {
+                        child.material = materials[0];
+                        if (child.material) child.material.needsUpdate = true;
+                    }
+                }
+            });
+        }
+
+        // Also process visual meshes (for compatibility)
+        this.visualMeshes.forEach(mesh => {
+            if (mesh.material) {
+                // Handle material arrays (common in DAE files with multiple materials)
+                const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+
+                materials.forEach((material, matIndex) => {
+                    if (!material) return;
+
+                    // Convert MeshBasicMaterial or MeshLambertMaterial to MeshPhongMaterial
+                    if (material.type === 'MeshBasicMaterial' || material.type === 'MeshLambertMaterial') {
+                        const oldMaterial = material;
+                        const enhancedLighting = enable;
+                        const envMap = this.sceneManager.environmentManager?.getEnvironmentMap();
+                        const newMaterial = new THREE.MeshPhongMaterial({
+                            color: oldMaterial.color,
+                            map: oldMaterial.map,
+                            transparent: oldMaterial.transparent,
+                            opacity: oldMaterial.opacity,
+                            side: oldMaterial.side,
+                            shininess: enhancedLighting ? 50 : 30,
+                            specular: enhancedLighting ? new THREE.Color(0.3, 0.3, 0.3) : new THREE.Color(0x111111),
+                            envMap: envMap || null,
+                            reflectivity: envMap ? 0.3 : 0
+                        });
+                        newMaterial.userData.originalShininess = 30;
+                        newMaterial.userData.originalSpecular = null;
+                        if (newMaterial.map) {
+                            newMaterial.map.colorSpace = THREE.SRGBColorSpace;
+                        }
+                        materials[matIndex] = newMaterial;
+                        material = newMaterial;
+                    }
+
+                    if (material && (material.isMeshPhongMaterial || material.isMeshStandardMaterial)) {
+                        // Save original properties if not already saved
+                        if (material.userData.originalShininess === undefined) {
+                            material.userData.originalShininess = material.shininess !== undefined ? material.shininess : 30;
+                            // Save original specular - if material had no specular, save null
+                            // Check if specular exists and is not the default dark value (0x111111)
+                            if (!material.specular) {
+                                material.userData.originalSpecular = null; // Mark as "no specular"
+                            } else if (material.specular.isColor) {
+                                // Check if it's Three.js default (0x111111)
+                                const spec = material.specular;
+                                if (spec.r < 0.1 && spec.g < 0.1 && spec.b < 0.1) {
+                                    material.userData.originalSpecular = null; // Likely default, treat as no specular
+                                } else {
+                                    material.userData.originalSpecular = spec.clone();
+                                }
+                            } else if (typeof material.specular === 'number') {
+                                if (material.specular === 0x111111 || material.specular < 0x111111) {
+                                    material.userData.originalSpecular = null; // Default or darker
+                                } else {
+                                    material.userData.originalSpecular = new THREE.Color(material.specular);
+                                }
+                            } else {
+                                material.userData.originalSpecular = null;
+                            }
+                        }
+
+                        if (enable) {
+                            // Apply enhanced lighting
+                            material.shininess = 50;
+                            if (!material.specular ||
+                                (material.specular.isColor && material.specular.r < 0.2) ||
+                                (typeof material.specular === 'number' && material.specular < 0x333333)) {
+                                material.specular = new THREE.Color(0.3, 0.3, 0.3);
+                            }
+                        } else {
+                            // Restore original lighting
+                            if (material.userData.originalShininess !== undefined) {
+                                material.shininess = material.userData.originalShininess;
+                            }
+                            // Check if original material had no specular (marked as null)
+                            if (material.userData.originalSpecular === null) {
+                                // Original material had no specular, use Three.js default
+                                material.specular = new THREE.Color(0x111111);
+                            } else if (material.userData.originalSpecular) {
+                                const originalSpec = material.userData.originalSpecular;
+                                if (originalSpec.isColor) {
+                                    material.specular = originalSpec.clone();
+                                } else {
+                                    material.specular = originalSpec;
+                                }
+                            }
+                            // If no original specular saved, keep current (shouldn't happen)
+                        }
+                        material.needsUpdate = true;
+                    }
+                });
+
+                // If material was an array, ensure the mesh uses the updated array
+                // This is critical for DAE files with multiple materials
+                if (Array.isArray(mesh.material)) {
+                    mesh.material = materials;
+                    // Mark all materials in array as needing update
+                    materials.forEach(mat => {
+                        if (mat) mat.needsUpdate = true;
+                    });
+                } else if (materials.length === 1) {
+                    mesh.material = materials[0];
+                    if (mesh.material) mesh.material.needsUpdate = true;
+                }
+            }
+        });
+
+
+        // Also process MuJoCo simulation scene if available
+        // Access mujocoSimulationManager through window.app (it's in App class, not SceneManager)
+        const mujocoManager = window.app?.mujocoSimulationManager;
+        if (mujocoManager && mujocoManager.mujocoRoot) {
+            mujocoManager.mujocoRoot.traverse((child) => {
+                if (child.isMesh && child.material) {
+                    const materials = Array.isArray(child.material) ? child.material : [child.material];
+
+                    materials.forEach(material => {
+                        if (material.isMeshPhongMaterial || material.isMeshStandardMaterial) {
+                            // Save original properties if not already saved
+                            if (material.userData.originalShininess === undefined) {
+                                material.userData.originalShininess = material.shininess !== undefined ? material.shininess : 30;
+                                // Save original specular
+                                if (!material.specular) {
+                                    material.userData.originalSpecular = null;
+                                } else if (material.specular.isColor) {
+                                    const spec = material.specular;
+                                    if (spec.r < 0.1 && spec.g < 0.1 && spec.b < 0.1) {
+                                        material.userData.originalSpecular = null;
+                                    } else {
+                                        material.userData.originalSpecular = spec.clone();
+                                    }
+                                } else {
+                                    material.userData.originalSpecular = null;
+                                }
+                            }
+
+                            if (enable) {
+                                // Apply enhanced lighting
+                                material.shininess = 50;
+                                if (!material.specular ||
+                                    (material.specular.isColor && material.specular.r < 0.2) ||
+                                    (typeof material.specular === 'number' && material.specular < 0x333333)) {
+                                    material.specular = new THREE.Color(0.3, 0.3, 0.3);
+                                }
+                            } else {
+                                // Restore original lighting
+                                if (material.userData.originalShininess !== undefined) {
+                                    material.shininess = material.userData.originalShininess;
+                                }
+                                // Check if original material had no specular (marked as null)
+                                if (material.userData.originalSpecular === null) {
+                                    // Original material had no specular, use Three.js default
+                                    material.specular = new THREE.Color(0x111111);
+                                } else if (material.userData.originalSpecular) {
+                                    const originalSpec = material.userData.originalSpecular;
+                                    if (originalSpec.isColor) {
+                                        material.specular = originalSpec.clone();
+                                    } else {
+                                        material.specular = originalSpec;
+                                    }
+                                }
+                            }
+                            material.needsUpdate = true;
+                        }
+                    });
+                }
+            });
         }
     }
 
@@ -296,6 +767,7 @@ export class VisualizationManager {
     /**
      * Update visual model transparency
      * When COM, axes, or joint axes are enabled, set model to semi-transparent
+     * Note: Inertia visualization does NOT make model transparent
      * Note: Only affects robot models with joints, not single meshes
      */
     updateVisualTransparency(showCOM, showAxes, showJointAxes, isSingleMesh) {
@@ -304,7 +776,7 @@ export class VisualizationManager {
             return;
         }
 
-        // Check if any feature is enabled
+        // Check if any feature is enabled (inertia visualization excluded)
         const shouldBeTransparent = showCOM || showAxes || showJointAxes;
         // Traverse all visual meshes and set transparency
         this.visualMeshes.forEach((mesh, index) => {

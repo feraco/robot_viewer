@@ -136,9 +136,20 @@ export class JointDragControls {
         // Only detect robot model, not entire scene
         const intersections = raycaster.intersectObject(model.threeObject, true);
 
+        // Filter out collision meshes and invisible objects
+        const validIntersections = intersections.filter(intersect => {
+            const obj = intersect.object;
+            // Skip collision meshes
+            if (obj.isURDFCollider || obj.userData?.isCollision || obj.userData?.isCollisionGeom) {
+                return false;
+            }
+            // Only check visible meshes
+            return obj.isMesh && obj.visible;
+        });
+
         // Like urdf-loaders, only detect first intersecting object (closest)
-        if (intersections.length !== 0) {
-            const hit = intersections[0];
+        if (validIntersections.length !== 0) {
+            const hit = validIntersections[0];
             hoveredLink = findParentLink(hit.object, model);
 
             if (hoveredLink) {
@@ -384,8 +395,32 @@ export class PointerJointDragControls extends JointDragControls {
             if (e.button !== 0) return;
             updateMouse(e);
             raycaster.setFromCamera(mouse, this.camera);
-            this.moveRay(raycaster.ray);
-            this.setGrabbed(true);
+
+            // Only grab if actually clicking on the model
+            // Check if ray intersects with the model before disabling camera controls
+            if (!this.model || !this.model.threeObject) return;
+
+            const intersections = raycaster.intersectObject(this.model.threeObject, true);
+
+            // Filter out collision meshes and invisible objects
+            const validIntersections = intersections.filter(intersect => {
+                const obj = intersect.object;
+                // Skip collision meshes
+                if (obj.isURDFCollider || obj.userData?.isCollision || obj.userData?.isCollisionGeom) {
+                    return false;
+                }
+                // Only check visible meshes
+                return obj.isMesh && obj.visible;
+            });
+
+            const hitLink = validIntersections.length > 0 ? findParentLink(validIntersections[0].object, this.model) : null;
+
+            // Only set grabbed if we actually hit a visible link
+            if (hitLink) {
+                this.moveRay(raycaster.ray);
+                this.setGrabbed(true);
+            }
+            // If not hitting model, don't grab - allow camera controls to work
         };
 
         this._mouseMove = e => {

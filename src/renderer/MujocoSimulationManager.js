@@ -99,17 +99,42 @@ export class MujocoSimulationManager {
             }
 
             // Load model (compatible with old and new API)
-            if (this.mujoco.Model && typeof this.mujoco.Model.load_from_xml === 'function') {
-                this.model = this.mujoco.Model.load_from_xml(xmlPath);
-                this.state = new this.mujoco.State(this.model);
-                this.simulation = new this.mujoco.Simulation(this.model, this.state);
-            }
-            else if (this.mujoco.MjModel && typeof this.mujoco.MjModel.loadFromXML === 'function') {
-                this.model = this.mujoco.MjModel.loadFromXML(xmlPath);
-                this.data = new this.mujoco.MjData(this.model);
-                this.isOldAPI = true;
-            } else {
-                throw new Error('Cannot find MuJoCo model loading method');
+            try {
+                if (this.mujoco.Model && typeof this.mujoco.Model.load_from_xml === 'function') {
+                    this.model = this.mujoco.Model.load_from_xml(xmlPath);
+                    this.state = new this.mujoco.State(this.model);
+                    this.simulation = new this.mujoco.Simulation(this.model, this.state);
+                }
+                else if (this.mujoco.MjModel && typeof this.mujoco.MjModel.loadFromXML === 'function') {
+                    this.model = this.mujoco.MjModel.loadFromXML(xmlPath);
+                    this.data = new this.mujoco.MjData(this.model);
+                    this.isOldAPI = true;
+                } else {
+                    throw new Error('Cannot find MuJoCo model loading method');
+                }
+            } catch (loadError) {
+                // Provide more detailed error information
+                let errorMsg = 'MuJoCo model loading failed: ';
+
+                if (loadError.message) {
+                    errorMsg += loadError.message;
+                } else {
+                    errorMsg += 'Unknown error';
+                }
+
+                // Check if it's a mesh compilation error
+                if (loadError.message && (loadError.message.includes('mesh') || loadError.message.includes('mjCMesh'))) {
+                    errorMsg += '\n\nThis is usually caused by one of the following:';
+                    errorMsg += '\n1. Mesh file path is incorrect or file is missing';
+                    errorMsg += '\n2. Mesh file format is not supported or corrupted';
+                    errorMsg += '\n3. Mesh file was not properly written to virtual file system';
+                }
+
+                // Log detailed error for debugging
+                console.error('MuJoCo model loading error:', loadError);
+                console.error('XML file path:', xmlPath);
+
+                throw new Error(errorMsg);
             }
 
             // Create MuJoCo visualization model (created directly from physics engine)
@@ -205,12 +230,15 @@ export class MujocoSimulationManager {
 
         // Parse all asset references
         const assetPaths = new Set();
+        const meshAssetMap = new Map(); // Map from resolved path to original mesh element
 
         // Parse mesh files
         doc.querySelectorAll('mesh[file]').forEach(el => {
             const file = el.getAttribute('file');
             if (file) {
-                assetPaths.add(this.resolvePath(filename, meshdir, file));
+                const resolvedPath = this.resolvePath(filename, meshdir, file);
+                assetPaths.add(resolvedPath);
+                meshAssetMap.set(resolvedPath, { original: file, element: el });
             }
         });
 
@@ -224,7 +252,8 @@ export class MujocoSimulationManager {
 
         // Write files to VFS
         let successCount = 0;
-        let failCount = 0;
+        const missingFiles = [];
+        const failedFiles = [];
 
         for (const assetPath of assetPaths) {
             // Extract all possible top-level directory prefixes from fileMap keys
@@ -256,11 +285,33 @@ export class MujocoSimulationManager {
             let file = null;
             let matchedKey = null;
 
+            // First try exact matches
             for (const variation of pathVariations) {
                 file = fileMap.get(variation);
                 if (file) {
                     matchedKey = variation;
                     break;
+                }
+            }
+
+            // If not found, try case-insensitive matching
+            if (!file) {
+                const assetPathLower = assetPath.toLowerCase();
+                const fileNameOnly = assetPath.split('/').pop().toLowerCase();
+
+                for (const [key, value] of fileMap.entries()) {
+                    const keyLower = key.toLowerCase();
+                    const keyFileName = key.split('/').pop().toLowerCase();
+
+                    // Match by full path or filename
+                    if (keyLower === assetPathLower ||
+                        keyLower.endsWith('/' + assetPathLower) ||
+                        keyFileName === fileNameOnly ||
+                        keyLower.includes(assetPathLower)) {
+                        file = value;
+                        matchedKey = key;
+                        break;
+                    }
                 }
             }
 
@@ -280,13 +331,57 @@ export class MujocoSimulationManager {
                         this.mujoco.FS.writeFile(vfsPath, text);
                     }
 
+                    // Verify file was written successfully
+                    try {
+                        const stat = this.mujoco.FS.stat(vfsPath);
+                        if (!stat) {
+                            throw new Error('File write verification failed');
+                        }
+                    } catch (verifyError) {
+                        throw new Error('File write verification failed');
+                    }
+
                     successCount++;
                 } catch (error) {
-                    failCount++;
+                    const meshInfo = meshAssetMap.get(assetPath);
+                    const displayPath = meshInfo ? meshInfo.original : assetPath;
+                    failedFiles.push({ path: displayPath, error: error.message });
                 }
             } else {
-                failCount++;
+                const meshInfo = meshAssetMap.get(assetPath);
+                const displayPath = meshInfo ? meshInfo.original : assetPath;
+                missingFiles.push(displayPath);
             }
+        }
+
+        // If critical mesh files are missing, throw detailed error
+        if (missingFiles.length > 0 || failedFiles.length > 0) {
+            let errorMsg = 'MuJoCo asset files loading failed:\n';
+
+            if (missingFiles.length > 0) {
+                errorMsg += `\nMissing files (${missingFiles.length}):\n`;
+                missingFiles.slice(0, 10).forEach(path => {
+                    errorMsg += `  - ${path}\n`;
+                });
+                if (missingFiles.length > 10) {
+                    errorMsg += `  ... ${missingFiles.length - 10} more files missing\n`;
+                }
+            }
+
+            if (failedFiles.length > 0) {
+                errorMsg += `\nFailed to write files (${failedFiles.length}):\n`;
+                failedFiles.slice(0, 10).forEach(({ path, error }) => {
+                    errorMsg += `  - ${path}: ${error}\n`;
+                });
+                if (failedFiles.length > 10) {
+                    errorMsg += `  ... ${failedFiles.length - 10} more files failed\n`;
+                }
+            }
+
+            errorMsg += `\nSuccessfully loaded: ${successCount} files`;
+            errorMsg += `\n\nPlease ensure all mesh files are included in the file list.`;
+
+            throw new Error(errorMsg);
         }
     }
 
@@ -345,20 +440,72 @@ export class MujocoSimulationManager {
         const names_array = new Uint8Array(model.names);
 
         // Get all mesh materials from original model
+        // Map: bodyName -> array of materials (in order of visual geometries)
         const linkMeshMaterials = new Map();
+        // Also create a map: bodyName -> array of visual geometries with their materials
+        const linkVisualGeometries = new Map();
 
         if (this.originalModel) {
             for (const [linkName, link] of this.originalModel.links) {
-                if (link.threeObject) {
-                    const materials = [];
+                const materials = [];
+                const visualGeoms = [];
+
+                // Extract materials from visual geometries (in order)
+                if (link.visuals && link.visuals.length > 0) {
+                    for (const visual of link.visuals) {
+                        if (visual.threeObject) {
+                            visual.threeObject.traverse((child) => {
+                                if (child.isMesh && child.material) {
+                                    // Clone material to avoid modifying original
+                                    // Handle material arrays (common in DAE files)
+                                    let clonedMaterial;
+                                    if (Array.isArray(child.material)) {
+                                        clonedMaterial = child.material.map(mat => mat ? mat.clone() : null);
+                                    } else if (child.material.clone) {
+                                        clonedMaterial = child.material.clone();
+                                    } else {
+                                        // Fallback: create a default material if clone is not available
+                                        clonedMaterial = new THREE.MeshPhongMaterial({
+                                            color: child.material.color || 0x808080,
+                                            transparent: child.material.transparent || false,
+                                            opacity: child.material.opacity !== undefined ? child.material.opacity : 1.0
+                                        });
+                                    }
+
+                                    materials.push(clonedMaterial);
+                                    visualGeoms.push({
+                                        material: clonedMaterial,
+                                        geometry: visual.geometry
+                                    });
+                                }
+                            });
+                        }
+                    }
+                } else if (link.threeObject) {
+                    // Fallback: traverse threeObject if no visuals array
                     link.threeObject.traverse((child) => {
                         if (child.isMesh && child.material) {
-                            materials.push(child.material.clone());
+                            // Handle material arrays
+                            let clonedMaterial;
+                            if (Array.isArray(child.material)) {
+                                clonedMaterial = child.material.map(mat => mat ? mat.clone() : null);
+                            } else if (child.material.clone) {
+                                clonedMaterial = child.material.clone();
+                            } else {
+                                clonedMaterial = new THREE.MeshPhongMaterial({
+                                    color: child.material.color || 0x808080,
+                                    transparent: child.material.transparent || false,
+                                    opacity: child.material.opacity !== undefined ? child.material.opacity : 1.0
+                                });
+                            }
+                            materials.push(clonedMaterial);
                         }
                     });
-                    if (materials.length > 0) {
-                        linkMeshMaterials.set(linkName, materials);
-                    }
+                }
+
+                if (materials.length > 0) {
+                    linkMeshMaterials.set(linkName, materials);
+                    linkVisualGeometries.set(linkName, visualGeoms);
                 }
             }
         }
@@ -421,40 +568,325 @@ export class MujocoSimulationManager {
 
             // Prefer using original model materials
             const bodyName = this.bodies[b].name;
-            const bodyMaterials = linkMeshMaterials.get(bodyName);
             const geomIndex = this.bodies[b].children.length; // Current geom index in this body
             let material;
             let usedOriginalMaterial = false;
+            let rgbaFromOriginal = null;
 
-            if (bodyMaterials && bodyMaterials.length > 0) {
-                // Use this body's materials (if multiple, select by index)
-                const matIndex = Math.min(geomIndex, bodyMaterials.length - 1);
-                material = bodyMaterials[matIndex].clone();
-                usedOriginalMaterial = true;
-            } else {
-                // Create material using MuJoCo colors
-                const color = [
-                    model.geom_rgba[g * 4 + 0],
-                    model.geom_rgba[g * 4 + 1],
-                    model.geom_rgba[g * 4 + 2],
-                    model.geom_rgba[g * 4 + 3]
-                ];
+            // Strategy 1: Try to find material by matching mesh name (most accurate)
+            if (type == this.mujoco.mjtGeom.mjGEOM_MESH.value && linkVisualGeometries.has(bodyName)) {
+                const meshID = model.geom_dataid[g];
+                // Get mesh name from MuJoCo model
+                const meshNameStart = model.name_meshadr[meshID];
+                let meshNameEnd = meshNameStart;
+                while (meshNameEnd < names_array.length && names_array[meshNameEnd] !== 0) {
+                    meshNameEnd++;
+                }
+                const meshNameBuffer = names_array.subarray(meshNameStart, meshNameEnd);
+                const meshName = textDecoder.decode(meshNameBuffer);
+
+                // Try to find matching visual geometry by mesh reference
+                const visualGeoms = linkVisualGeometries.get(bodyName);
+                for (const visualGeom of visualGeoms) {
+                    if (visualGeom.geometry && visualGeom.geometry.filename) {
+                        const filename = visualGeom.geometry.filename.split('/').pop().split('\\').pop();
+                        const filenameBase = filename.replace(/\.[^/.]+$/, ''); // Remove extension
+                        const meshFileName = meshName + '.STL';
+                        const meshFileNameBase = meshFileName.replace(/\.[^/.]+$/, '');
+
+                        // Match by exact name, case-insensitive name, or filename patterns
+                        if (filename === meshName || filename.toLowerCase() === meshName.toLowerCase() ||
+                            filenameBase === meshName || filenameBase.toLowerCase() === meshName.toLowerCase() ||
+                            filename === meshFileName || filename.toLowerCase() === meshFileName.toLowerCase() ||
+                            filenameBase === meshFileNameBase || filenameBase.toLowerCase() === meshFileNameBase.toLowerCase()) {
+
+                            // Clone material safely (handle material arrays)
+                            if (Array.isArray(visualGeom.material)) {
+                                // If material is array, take first material or create default
+                                const firstMat = visualGeom.material[0];
+                                if (firstMat && firstMat.clone) {
+                                    material = firstMat.clone();
+                                } else if (firstMat) {
+                                    material = new THREE.MeshPhongMaterial({
+                                        color: firstMat.color || 0x808080,
+                                        transparent: firstMat.transparent || false,
+                                        opacity: firstMat.opacity !== undefined ? firstMat.opacity : 1.0
+                                    });
+                                }
+                            } else if (visualGeom.material && visualGeom.material.clone) {
+                                material = visualGeom.material.clone();
+                            } else if (visualGeom.material) {
+                                material = new THREE.MeshPhongMaterial({
+                                    color: visualGeom.material.color || 0x808080,
+                                    transparent: visualGeom.material.transparent || false,
+                                    opacity: visualGeom.material.opacity !== undefined ? visualGeom.material.opacity : 1.0
+                                });
+                            }
+
+                            // Save original properties if not already saved (for lighting toggle)
+                            if (material && (material.isMeshPhongMaterial || material.isMeshStandardMaterial)) {
+                                if (material.userData.originalShininess === undefined) {
+                                    material.userData.originalShininess = material.shininess !== undefined ? material.shininess : 30;
+                                    // Save original specular
+                                    if (!material.specular) {
+                                        material.userData.originalSpecular = null;
+                                    } else if (material.specular.isColor) {
+                                        const spec = material.specular;
+                                        if (spec.r < 0.1 && spec.g < 0.1 && spec.b < 0.1) {
+                                            material.userData.originalSpecular = null;
+                                        } else {
+                                            material.userData.originalSpecular = spec.clone();
+                                        }
+                                    } else {
+                                        material.userData.originalSpecular = null;
+                                    }
+                                }
+                                // Apply lighting based on current state
+                                const enhancedLighting = this.sceneManager.visualizationManager.showEnhancedLighting;
+                                if (enhancedLighting) {
+                                    // Apply enhanced lighting
+                                    if (material.shininess !== undefined && material.shininess < 50) {
+                                        material.shininess = 50;
+                                    }
+                                    if (!material.specular || material.specular.r < 0.2) {
+                                        material.specular = new THREE.Color(0.3, 0.3, 0.3);
+                                    }
+                                } else {
+                                    // Restore original lighting if disabled
+                                    if (material.userData.originalShininess !== undefined) {
+                                        material.shininess = material.userData.originalShininess;
+                                    }
+                                    if (material.userData.originalSpecular === null) {
+                                        material.specular = new THREE.Color(0x111111);
+                                    } else if (material.userData.originalSpecular) {
+                                        const originalSpec = material.userData.originalSpecular;
+                                        if (originalSpec.isColor) {
+                                            material.specular = originalSpec.clone();
+                                        } else {
+                                            material.specular = originalSpec;
+                                        }
+                                    }
+                                }
+                            }
+                            usedOriginalMaterial = true;
+                            break;
+                        }
+                    }
+                }
+
+                // If material found but want to use rgba from userData, extract it
+                if (usedOriginalMaterial && this.originalModel) {
+                    const link = this.originalModel.links.get(bodyName);
+                    if (link && link.visuals) {
+                        for (const visual of link.visuals) {
+                            if (visual.geometry && visual.geometry.filename) {
+                                const filename = visual.geometry.filename.split('/').pop().split('\\').pop();
+                                const filenameBase = filename.replace(/\.[^/.]+$/, '');
+                                if (filenameBase.toLowerCase() === meshName.toLowerCase() ||
+                                    filename.toLowerCase() === (meshName + '.STL').toLowerCase()) {
+                                    if (visual.userData && visual.userData.rgba) {
+                                        rgbaFromOriginal = visual.userData.rgba;
+                                        // Update material color from rgba (if material exists)
+                                        if (material && material.color) {
+                                            material.color.setRGB(rgbaFromOriginal.r, rgbaFromOriginal.g, rgbaFromOriginal.b);
+                                            if (rgbaFromOriginal.a < 1.0) {
+                                                material.transparent = true;
+                                                material.opacity = rgbaFromOriginal.a;
+                                            }
+                                        }
+                                    }
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Strategy 2: Try to get rgba from original model's visual geometry by index
+            if (!usedOriginalMaterial && this.originalModel) {
+                const link = this.originalModel.links.get(bodyName);
+                if (link && link.visuals && link.visuals.length > 0) {
+                    // Try to match by geom index
+                    const visualIndex = Math.min(geomIndex, link.visuals.length - 1);
+                    const visual = link.visuals[visualIndex];
+                    if (visual) {
+                        if (visual.userData && visual.userData.rgba) {
+                            rgbaFromOriginal = visual.userData.rgba;
+                        } else if (visual.threeObject) {
+                            // Try to extract rgba from material
+                            visual.threeObject.traverse((child) => {
+                                if (child.isMesh && child.material && !rgbaFromOriginal) {
+                                    const matColor = child.material.color;
+                                    rgbaFromOriginal = {
+                                        r: matColor.r,
+                                        g: matColor.g,
+                                        b: matColor.b,
+                                        a: child.material.opacity !== undefined ? child.material.opacity : 1.0
+                                    };
+                                }
+                            });
+                        }
+                    }
+                }
+            }
+
+            // Strategy 3: Use materials array if available (fallback)
+            if (!usedOriginalMaterial) {
+                const bodyMaterials = linkMeshMaterials.get(bodyName);
+                if (bodyMaterials && bodyMaterials.length > 0) {
+                    const matIndex = Math.min(geomIndex, bodyMaterials.length - 1);
+                    const sourceMaterial = bodyMaterials[matIndex];
+
+                    // Clone material safely (handle material arrays)
+                    if (Array.isArray(sourceMaterial)) {
+                        const firstMat = sourceMaterial[0];
+                        if (firstMat && firstMat.clone) {
+                            material = firstMat.clone();
+                        } else if (firstMat) {
+                            material = new THREE.MeshPhongMaterial({
+                                color: firstMat.color || 0x808080,
+                                transparent: firstMat.transparent || false,
+                                opacity: firstMat.opacity !== undefined ? firstMat.opacity : 1.0
+                            });
+                        }
+                    } else if (sourceMaterial && sourceMaterial.clone) {
+                        material = sourceMaterial.clone();
+                    } else if (sourceMaterial) {
+                        material = new THREE.MeshPhongMaterial({
+                            color: sourceMaterial.color || 0x808080,
+                            transparent: sourceMaterial.transparent || false,
+                            opacity: sourceMaterial.opacity !== undefined ? sourceMaterial.opacity : 1.0
+                        });
+                    }
+
+                    // Save original properties if not already saved (for lighting toggle)
+                    if (material && (material.isMeshPhongMaterial || material.isMeshStandardMaterial)) {
+                        if (material.userData.originalShininess === undefined) {
+                            material.userData.originalShininess = material.shininess !== undefined ? material.shininess : 30;
+                            // Save original specular
+                            if (!material.specular) {
+                                material.userData.originalSpecular = null;
+                            } else if (material.specular.isColor) {
+                                const spec = material.specular;
+                                if (spec.r < 0.1 && spec.g < 0.1 && spec.b < 0.1) {
+                                    material.userData.originalSpecular = null;
+                                } else {
+                                    material.userData.originalSpecular = spec.clone();
+                                }
+                            } else {
+                                material.userData.originalSpecular = null;
+                            }
+                        }
+                        // Apply lighting based on current state
+                        const enhancedLighting = this.sceneManager.visualizationManager.showEnhancedLighting;
+                        if (enhancedLighting) {
+                            // Apply enhanced lighting
+                            if (material.shininess !== undefined && material.shininess < 50) {
+                                material.shininess = 50;
+                            }
+                            if (!material.specular || material.specular.r < 0.2) {
+                                material.specular = new THREE.Color(0.3, 0.3, 0.3);
+                            }
+                        } else {
+                            // Restore original lighting if disabled
+                            if (material.userData.originalShininess !== undefined) {
+                                material.shininess = material.userData.originalShininess;
+                            }
+                            if (material.userData.originalSpecular === null) {
+                                material.specular = new THREE.Color(0x111111);
+                            } else if (material.userData.originalSpecular) {
+                                const originalSpec = material.userData.originalSpecular;
+                                if (originalSpec.isColor) {
+                                    material.specular = originalSpec.clone();
+                                } else {
+                                    material.specular = originalSpec;
+                                }
+                            }
+                        }
+                    }
+                    usedOriginalMaterial = true;
+                }
+            }
+
+            // Strategy 4: Create material using rgba from original model or MuJoCo colors
+            if (!usedOriginalMaterial) {
+                const color = rgbaFromOriginal ?
+                    [rgbaFromOriginal.r, rgbaFromOriginal.g, rgbaFromOriginal.b, rgbaFromOriginal.a] :
+                    [
+                        model.geom_rgba[g * 4 + 0],
+                        model.geom_rgba[g * 4 + 1],
+                        model.geom_rgba[g * 4 + 2],
+                        model.geom_rgba[g * 4 + 3]
+                    ];
 
                 // If group=3 collision geom, set semi-transparent green for debugging
                 const isCollisionGeom = group === 3;
+                // Check current enhanced lighting state
+                const enhancedLighting = this.sceneManager.visualizationManager.showEnhancedLighting;
                 material = new THREE.MeshPhongMaterial({
                     color: isCollisionGeom ? new THREE.Color(0, 1, 0) : new THREE.Color(color[0], color[1], color[2]),
                     transparent: isCollisionGeom ? true : (color[3] < 1.0),
                     opacity: isCollisionGeom ? 0.3 : color[3],
-                    shininess: 30,
+                    shininess: enhancedLighting ? 50 : 30,  // Apply based on lighting state
+                    specular: enhancedLighting ? new THREE.Color(0.3, 0.3, 0.3) : new THREE.Color(0x111111),  // Apply based on lighting state
                     wireframe: isCollisionGeom ? true : false  // Collision geoms displayed as wireframe
                 });
+                // Save original properties for lighting toggle
+                material.userData.originalShininess = 30;
+                material.userData.originalSpecular = null; // New material, no original specular
+            }
+
+            // Ensure material has correct lighting state applied
+            if (material.isMeshPhongMaterial || material.isMeshStandardMaterial) {
+                const enhancedLighting = this.sceneManager.visualizationManager.showEnhancedLighting;
+                if (enhancedLighting) {
+                    // Ensure enhanced lighting is applied
+                    if (material.shininess < 50) {
+                        material.shininess = 50;
+                    }
+                    if (!material.specular || (material.specular.isColor && material.specular.r < 0.2)) {
+                        material.specular = new THREE.Color(0.3, 0.3, 0.3);
+                    }
+                } else {
+                    // Ensure original lighting is applied
+                    if (material.userData.originalShininess !== undefined) {
+                        material.shininess = material.userData.originalShininess;
+                    }
+                    if (material.userData.originalSpecular === null) {
+                        material.specular = new THREE.Color(0x111111);
+                    } else if (material.userData.originalSpecular) {
+                        const originalSpec = material.userData.originalSpecular;
+                        if (originalSpec.isColor) {
+                            material.specular = originalSpec.clone();
+                        } else {
+                            material.specular = originalSpec;
+                        }
+                    }
+                }
+                material.needsUpdate = true;
             }
 
             // Create mesh
-            const mesh = new THREE.Mesh(geometry, material);
-            mesh.castShadow = true;
-            mesh.receiveShadow = true;
+            let finalMaterial = material;
+
+            // Use special material for collision geometry (semi-transparent yellow)
+            if (group === 3) {
+                finalMaterial = new THREE.MeshPhongMaterial({
+                    transparent: true,
+                    opacity: 0.35,
+                    shininess: 2.5,
+                    premultipliedAlpha: true,
+                    color: 0xffbe38,
+                    polygonOffset: true,
+                    polygonOffsetFactor: -1,
+                    polygonOffsetUnits: -1,
+                });
+            }
+
+            const mesh = new THREE.Mesh(geometry, finalMaterial);
+            mesh.castShadow = group !== 3;  // Collision geoms don't cast shadows
+            mesh.receiveShadow = group !== 3;
             mesh.bodyID = b;
 
             // Mark collision geom and set initial visibility
@@ -943,6 +1375,16 @@ export class MujocoSimulationManager {
             this.mujocoRoot = null;
         }
 
+        // Restore original model visibility
+        if (this.sceneManager.currentModel && this.sceneManager.currentModel.threeObject) {
+            this.sceneManager.currentModel.threeObject.visible = true;
+        }
+
+        // Restore original model drag controls
+        if (this.sceneManager.dragControls) {
+            this.sceneManager.dragControls.enabled = true;
+        }
+
         // Clear drag manager
         if (this.dragStateManager) {
             this.dragStateManager.disable();
@@ -1035,13 +1477,12 @@ export class MujocoSimulationManager {
     updateVisualTransparency() {
         if (!this.mujocoRoot) return;
 
-        // Check if any visualization features are enabled
+        // Check if any visualization features are enabled (excluding inertia)
         const showCOM = document.getElementById('show-com')?.classList.contains('active');
         const showAxes = document.getElementById('toggle-axes-btn')?.getAttribute('data-checked') === 'true';
         const showJointAxes = document.getElementById('toggle-joint-axes-btn')?.getAttribute('data-checked') === 'true';
-        const showInertia = document.getElementById('show-inertia')?.classList.contains('active');
 
-        const shouldBeTransparent = showCOM || showAxes || showJointAxes || showInertia;
+        const shouldBeTransparent = showCOM || showAxes || showJointAxes;
 
         // Traverse all body visual meshes, use VisualizationManager static method
         for (let b = 0; b < this.model.nbody; b++) {

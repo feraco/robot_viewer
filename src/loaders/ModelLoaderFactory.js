@@ -160,15 +160,50 @@ export class ModelLoaderFactory {
 
                 loader.packages = packageMap;
 
-                // Set URL Modifier to intercept all URL requests
-                loader.manager.setURLModifier((url) => {
-                    // If already Blob URL, return directly
+                // Set URL Modifier to intercept all URL requests (including textures)
+                // This MUST be set on loader.manager to catch TextureLoader requests
+                const urlModifier = (url) => {
+                    // Check if this is a malformed blob URL (blob:http://host/filename instead of blob:http://host/uuid)
+                    // This can happen when ColladaLoader or other loaders incorrectly create blob URLs
                     if (url.startsWith('blob:')) {
-                        return url;
+                        // Extract the path after blob:http://host/
+                        const blobMatch = url.match(/^blob:https?:\/\/[^\/]+\/(.+)$/);
+                        if (blobMatch && blobMatch[1]) {
+                            const fileName = blobMatch[1];
+                            // If it looks like a filename (has extension), it's a malformed blob URL
+                            if (/\.(jpg|jpeg|png|gif|bmp|tga|tiff|webp|dae|stl|obj|gltf|glb)$/i.test(fileName)) {
+                                // Treat it as a regular file path and process it
+                                url = fileName;
+                            } else {
+                                // Valid blob URL format (has UUID), return as-is
+                                return url;
+                            }
+                        } else {
+                            // Valid blob URL format, return as-is
+                            return url;
+                        }
                     }
 
-                    // Clean path
+                    const isTextureFile = /\.(jpg|jpeg|png|gif|bmp|tga|tiff|webp)$/i.test(url);
+                    const isMeshFile = /\.(dae|stl|obj|gltf|glb)$/i.test(url);
+
+                    // Clean path - handle both absolute URLs and relative paths
                     let meshPath = url;
+
+                    // Remove http:// or https:// prefix if present (shouldn't happen but be safe)
+                    if (meshPath.startsWith('http://') || meshPath.startsWith('https://')) {
+                        // This is an absolute URL, try to extract path
+                        try {
+                            const urlObj = new URL(meshPath);
+                            meshPath = urlObj.pathname;
+                            // Remove leading slash
+                            if (meshPath.startsWith('/')) {
+                                meshPath = meshPath.substring(1);
+                            }
+                        } catch (e) {
+                            // Invalid URL, use as-is
+                        }
+                    }
 
                     // Remove package:// prefix
                     if (meshPath.startsWith('package://')) {
@@ -183,22 +218,50 @@ export class ModelLoaderFactory {
                     // Remove leading ./
                     meshPath = meshPath.replace(/^\.\//, '');
 
+                    // Handle relative paths (e.g., ../meshes/xxx.jpg)
+                    // Normalize path by resolving ../
+                    let normalizedPath = meshPath;
+                    if (meshPath.includes('../')) {
+                        const parts = meshPath.split('/');
+                        const resolvedParts = [];
+                        for (const part of parts) {
+                            if (part === '..') {
+                                resolvedParts.pop();
+                            } else if (part !== '.' && part !== '') {
+                                resolvedParts.push(part);
+                            }
+                        }
+                        normalizedPath = resolvedParts.join('/');
+                    }
+
                     // Build full path based on URDF file location
                     // If URDF is at "e3_v2/e3.urdf", mesh path is "meshes/file.stl"
                     // Then full path should be "e3_v2/meshes/file.stl"
-                    const fullPath = urdfDir + meshPath;
+                    // Also try with normalized path for relative paths
+                    const fullPath = urdfDir + normalizedPath;
+                    const altPath = urdfDir + meshPath;
 
-                    // Find file in fileMap
+                    // Find file in fileMap - try multiple path variations
                     let matchedFile = fileMap.get(fullPath);
 
+                    if (!matchedFile && altPath !== fullPath) {
+                        // Try alternative path (with original relative path)
+                        matchedFile = fileMap.get(altPath);
+                    }
+
                     if (!matchedFile) {
-                        // Try path without directory prefix
+                        // Try normalized path without directory prefix
+                        matchedFile = fileMap.get(normalizedPath);
+                    }
+
+                    if (!matchedFile) {
+                        // Try path without directory prefix (original)
                         matchedFile = fileMap.get(meshPath);
                     }
 
                     if (!matchedFile) {
                         // Try filename only match
-                        const targetFileName = meshPath.split('/').pop();
+                        const targetFileName = normalizedPath.split('/').pop() || meshPath.split('/').pop();
                         for (const [key, file] of fileMap.entries()) {
                             const keyFileName = key.split('/').pop();
                             if (keyFileName === targetFileName) {
@@ -211,12 +274,16 @@ export class ModelLoaderFactory {
                     if (matchedFile) {
                         // Create Blob URL (don't revoke immediately, let loader finish using it)
                         const bloburl = URL.createObjectURL(matchedFile);
+                        // IMPORTANT: Return the blob URL directly - TextureLoader will use it as-is
                         return bloburl;
                     }
 
-                    // If not found, return original URL (urdf-loader will fallback to other paths)
+                    // If not found, return original URL - urdf-loader will handle it
                     return url;
-                });
+                };
+
+                // Set the URL modifier on the manager
+                loader.manager.setURLModifier(urlModifier);
 
                 // Custom loadMeshCb to load mesh files from fileMap
                 const originalLoadMeshCb = loader.loadMeshCb || loader.defaultMeshLoader.bind(loader);

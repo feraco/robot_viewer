@@ -181,6 +181,13 @@ export async function loadMeshFile(meshPath, fileMap) {
             }
 
             URL.revokeObjectURL(url);
+
+            // Ensure all meshes in loaded geometry have Phong materials with proper lighting
+            // This is critical for DAE/OBJ files which may have nested Groups
+            if (geometry && (geometry.isGroup || geometry.isObject3D || geometry.isScene)) {
+                ensureMeshHasPhongMaterial(geometry);
+            }
+
             return geometry;
         } catch (error) {
             URL.revokeObjectURL(url);
@@ -195,29 +202,95 @@ export async function loadMeshFile(meshPath, fileMap) {
 
 /**
  * Ensure mesh uses lighting-compatible material
+ * Enhanced for better lighting (MuJoCo style)
  */
 export function ensureMeshHasPhongMaterial(meshObject) {
     meshObject.traverse((child) => {
         if (child.isMesh && child.material) {
-            if (child.material.type === 'MeshBasicMaterial') {
-                const oldMaterial = child.material;
-                child.material = new THREE.MeshPhongMaterial({
-                    color: oldMaterial.color,
-                    map: oldMaterial.map,
-                    transparent: oldMaterial.transparent,
-                    opacity: oldMaterial.opacity,
-                    side: oldMaterial.side,
-                    shininess: 30,
-                    specular: 0x444444
-                });
-                if (child.material.map) {
-                    child.material.map.colorSpace = THREE.SRGBColorSpace;
+            // Handle material arrays (common in DAE files with multiple materials)
+            const materials = Array.isArray(child.material) ? child.material : [child.material];
+
+            materials.forEach((material, matIndex) => {
+                if (!material) return;
+
+                // Convert MeshBasicMaterial or MeshLambertMaterial to MeshPhongMaterial
+                if (material.type === 'MeshBasicMaterial' || material.type === 'MeshLambertMaterial') {
+                    const oldMaterial = material;
+                    const enhancedLighting = typeof window !== 'undefined' && window.app?.sceneManager?.visualizationManager?.showEnhancedLighting !== false;
+                    const envMap = typeof window !== 'undefined' && window.app?.sceneManager?.environmentManager?.getEnvironmentMap();
+                    const newMaterial = new THREE.MeshPhongMaterial({
+                        color: oldMaterial.color,
+                        map: oldMaterial.map,
+                        transparent: oldMaterial.transparent,
+                        opacity: oldMaterial.opacity,
+                        side: oldMaterial.side,
+                        shininess: enhancedLighting ? 50 : 30,
+                        specular: enhancedLighting ? new THREE.Color(0.3, 0.3, 0.3) : new THREE.Color(0x111111),
+                        envMap: envMap || null,
+                        reflectivity: envMap ? 0.3 : 0
+                    });
+                    // Save original properties for lighting toggle
+                    newMaterial.userData.originalShininess = 30;
+                    newMaterial.userData.originalSpecular = null; // New material, no original specular
+                    if (newMaterial.map) {
+                        newMaterial.map.colorSpace = THREE.SRGBColorSpace;
+                    }
+                    materials[matIndex] = newMaterial;
+                } else if (material.isMeshPhongMaterial || material.isMeshStandardMaterial) {
+                    // Save original properties before enhancing (for lighting toggle)
+                    if (material.userData.originalShininess === undefined) {
+                        material.userData.originalShininess = material.shininess !== undefined ? material.shininess : 30;
+                        // Save original specular - if material had no specular, save null
+                        if (!material.specular) {
+                            material.userData.originalSpecular = null;
+                        } else if (material.specular.isColor) {
+                            const spec = material.specular;
+                            if (spec.r < 0.1 && spec.g < 0.1 && spec.b < 0.1) {
+                                material.userData.originalSpecular = null; // Likely default
+                            } else {
+                                material.userData.originalSpecular = spec.clone();
+                            }
+                        } else if (typeof material.specular === 'number') {
+                            if (material.specular === 0x111111 || material.specular < 0x111111) {
+                                material.userData.originalSpecular = null;
+                            } else {
+                                material.userData.originalSpecular = new THREE.Color(material.specular);
+                            }
+                        } else {
+                            material.userData.originalSpecular = null;
+                        }
+                    }
+                    // Apply environment map for reflections
+                    const envMap = typeof window !== 'undefined' && window.app?.sceneManager?.environmentManager?.getEnvironmentMap();
+                    if (envMap && !material.envMap) {
+                        material.envMap = envMap;
+                        if (material.reflectivity === undefined) {
+                            material.reflectivity = 0.3;
+                        }
+                        material.needsUpdate = true;
+                    }
+                    // Enhance existing Phong/Standard materials - default enabled
+                    // Check current enhanced lighting state (if available)
+                    const enhancedLighting = typeof window !== 'undefined' && window.app?.sceneManager?.visualizationManager?.showEnhancedLighting !== false;
+                    if (enhancedLighting) {
+                        if (material.shininess === undefined || material.shininess < 50) {
+                            material.shininess = 50;
+                        }
+                        if (!material.specular ||
+                            (material.specular.isColor && material.specular.r < 0.2) ||
+                            (typeof material.specular === 'number' && material.specular < 0x333333)) {
+                            material.specular = new THREE.Color(0.3, 0.3, 0.3);
+                        }
+                    }
+                    material.needsUpdate = true;
                 }
-            } else if (!child.material.specular || child.material.specular.getHex() === 0x000000) {
-                child.material.specular = new THREE.Color(0x444444);
-                if (child.material.shininess === undefined || child.material.shininess === 0) {
-                    child.material.shininess = 30;
-                }
+            });
+
+            // Update mesh material (handle arrays)
+            if (Array.isArray(child.material)) {
+                child.material = materials;
+            } else if (materials.length === 1) {
+                child.material = materials[0];
             }
         }
     });

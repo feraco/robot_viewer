@@ -66,7 +66,122 @@ export class URDFAdapter {
             model.rootLink = rootLinks[0];
         }
 
+        // Enhance materials for better lighting (MuJoCo style)
+        this.enhanceMaterials(robot);
+
         return model;
+    }
+
+    /**
+     * Enhance materials for better lighting (MuJoCo style)
+     * Applies consistent shininess and specular properties to all materials
+     * Directly modifies materials in place to ensure changes persist
+     */
+    static enhanceMaterials(robotObject) {
+        robotObject.traverse((child) => {
+            if (child.isMesh && child.material) {
+                // Handle material arrays
+                if (Array.isArray(child.material)) {
+                    child.material = child.material.map(mat => {
+                        return this.enhanceSingleMaterial(mat);
+                    });
+                } else {
+                    child.material = this.enhanceSingleMaterial(child.material);
+                }
+            }
+        });
+    }
+
+    /**
+     * Enhance a single material with better lighting properties
+     * Returns enhanced material (may be cloned or modified in place)
+     * Saves original properties for lighting toggle
+     */
+    static enhanceSingleMaterial(material) {
+        if (material.isMeshPhongMaterial || material.isMeshStandardMaterial) {
+            // Save original properties if not already saved (for lighting toggle)
+            if (material.userData.originalShininess === undefined) {
+                material.userData.originalShininess = material.shininess !== undefined ? material.shininess : 30;
+                // IMPORTANT: Save original color to preserve URDF material colors
+                if (!material.userData.originalColor && material.color) {
+                    material.userData.originalColor = material.color.clone();
+                }
+                // Save original specular - if material had no specular, save null
+                if (!material.specular) {
+                    material.userData.originalSpecular = null;
+                } else if (material.specular.isColor) {
+                    const spec = material.specular;
+                    if (spec.r < 0.1 && spec.g < 0.1 && spec.b < 0.1) {
+                        material.userData.originalSpecular = null; // Likely default
+                    } else {
+                        material.userData.originalSpecular = spec.clone();
+                    }
+                } else if (typeof material.specular === 'number') {
+                    if (material.specular === 0x111111 || material.specular < 0x111111) {
+                        material.userData.originalSpecular = null;
+                    } else {
+                        material.userData.originalSpecular = new THREE.Color(material.specular);
+                    }
+                } else {
+                    material.userData.originalSpecular = null;
+                }
+            }
+
+            // IMPORTANT: Preserve original color from URDF material definitions
+            // Do not modify material.color - urdf-loaders already sets the correct color
+
+            // Apply enhanced lighting (default enabled)
+            // Increase shininess for better highlights
+            if (material.shininess === undefined || material.shininess < 50) {
+                material.shininess = 50;
+            }
+
+            // Enhance specular reflection - ensure it's a Color object with proper values
+            if (!material.specular) {
+                material.specular = new THREE.Color(0.3, 0.3, 0.3);
+            } else if (material.specular.isColor) {
+                // If it's already a Color object, update values
+                if (material.specular.r < 0.2 || material.specular.g < 0.2 || material.specular.b < 0.2) {
+                    material.specular.setRGB(0.3, 0.3, 0.3);
+                }
+            } else if (typeof material.specular === 'number') {
+                // Convert number to Color object
+                if (material.specular < 0x333333) {
+                    material.specular = new THREE.Color(0.3, 0.3, 0.3);
+                } else {
+                    // Convert hex to Color
+                    material.specular = new THREE.Color(material.specular);
+                    if (material.specular.r < 0.2) {
+                        material.specular.setRGB(0.3, 0.3, 0.3);
+                    }
+                }
+            }
+
+            // Mark material as needing update
+            material.needsUpdate = true;
+            return material;
+        } else if (material.type === 'MeshBasicMaterial') {
+            // Convert MeshBasicMaterial to MeshPhongMaterial
+            const oldMaterial = material;
+            const envMap = typeof window !== 'undefined' && window.app?.sceneManager?.environmentManager?.getEnvironmentMap();
+            const newMaterial = new THREE.MeshPhongMaterial({
+                color: oldMaterial.color,
+                map: oldMaterial.map,
+                transparent: oldMaterial.transparent,
+                opacity: oldMaterial.opacity,
+                side: oldMaterial.side,
+                shininess: 50,
+                specular: new THREE.Color(0.3, 0.3, 0.3),
+                envMap: envMap || null,
+                reflectivity: envMap ? 0.3 : 0
+            });
+            // Save original properties for lighting toggle
+            newMaterial.userData.originalShininess = 30;
+            newMaterial.userData.originalSpecular = null; // MeshBasicMaterial had no specular
+            return newMaterial;
+        }
+
+        return material;
     }
 
     static convertLink(urdfLink) {

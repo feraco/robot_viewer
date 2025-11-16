@@ -44,7 +44,7 @@ export class MeasurementController {
 
         // If 2 objects selected, show measurement result
         if (this.selectedObjects.length === 2) {
-            this.measurementManager.showMeasurement(this.selectedObjects[0], this.selectedObjects[1]);
+            this.showMeasurement(this.selectedObjects[0], this.selectedObjects[1]);
         } else {
             if (this.sceneManager) {
                 this.sceneManager.measurementManager.clearMeasurement();
@@ -97,7 +97,7 @@ export class MeasurementController {
      */
     updateMeasurement() {
         if (this.selectedObjects.length === 2) {
-            this.measurementManager.showMeasurement(this.selectedObjects[0], this.selectedObjects[1]);
+            this.showMeasurement(this.selectedObjects[0], this.selectedObjects[1]);
         }
     }
 

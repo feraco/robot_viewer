@@ -11,6 +11,8 @@ export class EnvironmentManager {
         this.groundPlane = null;
         this.globalAxes = null;
         this.referenceGrid = null;
+        this.envMap = null;
+        this.pmremGenerator = null;
     }
 
     /**
@@ -48,6 +50,83 @@ export class EnvironmentManager {
         this.lights.fill.position.set(-2, 2, -2);
         this.lights.fill.castShadow = false;
         this.scene.add(this.lights.fill);
+
+        // Setup environment map for reflections
+        this.setupEnvironmentMap();
+    }
+
+    /**
+     * Setup environment map for material reflections
+     */
+    setupEnvironmentMap(renderer = null) {
+        // Create a simple environment map using PMREMGenerator
+        // This will be used for material reflections
+        if (renderer) {
+            // Initialize PMREMGenerator if renderer is available
+            if (!this.pmremGenerator) {
+                this.pmremGenerator = new THREE.PMREMGenerator(renderer);
+                this.pmremGenerator.compileEquirectangularShader();
+            }
+
+            // Create a simple scene for environment map generation
+            const envScene = new THREE.Scene();
+
+            // Add hemisphere light to environment scene
+            const envLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.0);
+            envScene.add(envLight);
+
+            // Generate environment map
+            this.envMap = this.pmremGenerator.fromScene(envScene, 0.04).texture;
+            this.envMap.mapping = THREE.EquirectangularReflectionMapping;
+
+            // Set environment map on scene
+            this.scene.environment = this.envMap;
+            this.scene.background = this.scene.background || new THREE.Color(0x505050);
+        } else {
+            // Fallback: create a simple cube texture environment map
+            // This works without renderer but provides basic reflections
+            const size = 256;
+            const data = new Uint8Array(size * size * 4);
+            const color = new THREE.Color(0xffffff);
+
+            for (let i = 0; i < size * size; i++) {
+                const stride = i * 4;
+                data[stride] = Math.floor(color.r * 255);
+                data[stride + 1] = Math.floor(color.g * 255);
+                data[stride + 2] = Math.floor(color.b * 255);
+                data[stride + 3] = 255;
+            }
+
+            const texture = new THREE.DataTexture(data, size, size);
+            texture.needsUpdate = true;
+
+            // Create cube texture from single color
+            const cubeTexture = new THREE.CubeTexture([
+                texture, texture, texture,
+                texture, texture, texture
+            ]);
+            cubeTexture.needsUpdate = true;
+            cubeTexture.mapping = THREE.CubeReflectionMapping;
+
+            this.envMap = cubeTexture;
+            this.scene.environment = this.envMap;
+        }
+    }
+
+    /**
+     * Initialize environment map with renderer (called after renderer is created)
+     */
+    initializeEnvironmentMap(renderer) {
+        if (renderer && !this.envMap) {
+            this.setupEnvironmentMap(renderer);
+        }
+    }
+
+    /**
+     * Get environment map
+     */
+    getEnvironmentMap() {
+        return this.envMap;
     }
 
     /**
