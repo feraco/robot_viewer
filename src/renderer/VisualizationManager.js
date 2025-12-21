@@ -733,8 +733,17 @@ export class VisualizationManager {
 
             // Process mesh
             if (obj.type === 'Mesh' || obj.isMesh) {
-                // Skip collision mesh
-                if (obj.isURDFCollider || obj.userData?.isCollision) {
+                // Skip collision mesh - don't modify collision visibility here
+                let isCollision = false;
+                let checkNode = obj;
+                while (checkNode) {
+                    if (checkNode.isURDFCollider) {
+                        isCollision = true;
+                        break;
+                    }
+                    checkNode = checkNode.parent;
+                }
+                if (isCollision || obj.userData?.isCollision) {
                     return;
                 }
 
