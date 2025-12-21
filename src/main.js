@@ -832,6 +832,15 @@ class App {
             this.modelGraphView.drawModelGraph(this.currentModel);
         }
 
+        // Update file tree view (preserve expanded state)
+        if (this.fileTreeView && this.fileHandler) {
+            this.fileTreeView.updateFileTree(
+                this.fileHandler.getAvailableModels(),
+                this.fileHandler.getFileMap(),
+                true
+            );
+        }
+
         // Update simulation button text
         const simulateBtn = document.getElementById('mujoco-simulate-btn-bar');
         if (simulateBtn) {

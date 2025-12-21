@@ -59,10 +59,12 @@ export class FileTreeView {
         // First line: drag and drop hint
         const line1 = document.createElement('div');
         line1.textContent = window.i18n?.t('dropHint') || 'Drag and drop robot model files or folders anywhere';
+        line1.setAttribute('data-i18n', 'dropHint');
 
         // Second line: or click button
         const line2 = document.createElement('div');
         line2.textContent = window.i18n?.t('orClickButton') || 'or click button to load';
+        line2.setAttribute('data-i18n', 'orClickButton');
         line2.style.marginTop = '4px';
 
         emptyText.appendChild(line1);
@@ -79,7 +81,10 @@ export class FileTreeView {
         // Load Files Button
         const loadFilesButton = document.createElement('button');
         loadFilesButton.className = 'control-button load-files-btn';
-        loadFilesButton.innerHTML = '<span>' + (window.i18n?.t('loadFiles') || 'Load Files') + '</span>';
+        const loadFilesSpan = document.createElement('span');
+        loadFilesSpan.textContent = window.i18n?.t('loadFiles') || 'Load Files';
+        loadFilesSpan.setAttribute('data-i18n', 'loadFiles');
+        loadFilesButton.appendChild(loadFilesSpan);
         loadFilesButton.style.cssText = `
             padding: 8px 16px;
             font-size: 13px;
@@ -95,7 +100,10 @@ export class FileTreeView {
         // Load Folder Button
         const loadFolderButton = document.createElement('button');
         loadFolderButton.className = 'control-button load-folder-btn';
-        loadFolderButton.innerHTML = '<span>' + (window.i18n?.t('loadFolder') || 'Load Folder') + '</span>';
+        const loadFolderSpan = document.createElement('span');
+        loadFolderSpan.textContent = window.i18n?.t('loadFolder') || 'Load Folder';
+        loadFolderSpan.setAttribute('data-i18n', 'loadFolder');
+        loadFolderButton.appendChild(loadFolderSpan);
         loadFolderButton.style.cssText = `
             padding: 8px 16px;
             font-size: 13px;
