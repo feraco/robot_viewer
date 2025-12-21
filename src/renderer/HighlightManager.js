@@ -107,15 +107,58 @@ export class HighlightManager {
 
             // Process mesh
             if (obj.type === 'Mesh' || obj.isMesh) {
-                // Skip collision mesh and auxiliary visualization objects
-                if (obj.isURDFCollider || obj.userData?.isCollision || this.isAuxiliaryVisualization(obj)) {
+                // Skip collision mesh (collision is highlighted separately)
+                if (obj.isURDFCollider) {
                     return;
                 }
 
+                // Save original material
                 if (!obj.__origMaterial) {
                     obj.__origMaterial = obj.material;
                 }
-                obj.material = this.highlightMaterial;
+
+                // Check if this is a special visualization object
+                const isInertia = obj.userData?.isInertiaBox;
+                const isCollision = obj.userData?.isCollision || obj.userData?.isCollisionGeom;
+                const isCOM = obj.userData?.isCenterOfMass || (obj.parent && obj.parent.userData?.isCenterOfMass);
+
+                if (isInertia || isCollision) {
+                    // For inertia and collision, keep original color but increase opacity slightly
+                    const originalMat = obj.__origMaterial;
+                    if (originalMat.isMeshPhongMaterial) {
+                        obj.material = new THREE.MeshPhongMaterial({
+                            transparent: true,
+                            opacity: Math.min((originalMat.opacity || 0.35) + 0.15, 0.7), // Increase opacity by 0.15
+                            shininess: originalMat.shininess,
+                            premultipliedAlpha: originalMat.premultipliedAlpha,
+                            color: originalMat.color.clone(),
+                            emissive: originalMat.color.clone(),
+                            emissiveIntensity: 0.2, // Add slight glow
+                            polygonOffset: originalMat.polygonOffset,
+                            polygonOffsetFactor: originalMat.polygonOffsetFactor,
+                            polygonOffsetUnits: originalMat.polygonOffsetUnits,
+                        });
+                    }
+                } else if (isCOM) {
+                    // For COM, keep original color but add emissive glow
+                    const originalMat = obj.__origMaterial;
+                    if (originalMat.isMeshBasicMaterial) {
+                        obj.material = new THREE.MeshBasicMaterial({
+                            color: originalMat.color.clone(),
+                            side: originalMat.side,
+                            depthTest: originalMat.depthTest,
+                            depthWrite: originalMat.depthWrite,
+                            // Add emissive for glow effect (convert to Phong for emissive)
+                        });
+                        // For basic material, we'll brighten the color slightly
+                        const hsl = {};
+                        obj.material.color.getHSL(hsl);
+                        obj.material.color.setHSL(hsl.h, hsl.s, Math.min(hsl.l + 0.3, 1.0));
+                    }
+                } else {
+                    // For regular visual meshes, use white highlight
+                    obj.material = this.highlightMaterial;
+                }
             }
 
             // Recursively process children
@@ -164,10 +207,7 @@ export class HighlightManager {
 
             // Process mesh
             if (obj.type === 'Mesh' || obj.isMesh) {
-                if (this.isAuxiliaryVisualization(obj)) {
-                    return;
-                }
-
+                // Restore material for all meshes (including COM and inertia)
                 if (obj.__origMaterial) {
                     obj.material = obj.__origMaterial;
                     delete obj.__origMaterial;

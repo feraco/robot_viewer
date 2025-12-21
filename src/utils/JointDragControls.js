@@ -116,6 +116,8 @@ export class JointDragControls {
         this.domElement = domElement;
         this.model = model;
         this.raycaster = new THREE.Raycaster();
+        // Allow raycasting to detect invisible objects (for when visual is hidden)
+        this.raycaster.layers.enableAll();
         this.initialGrabPoint = new THREE.Vector3();
         this.hitDistance = -1;
         this.hovered = null;
@@ -133,18 +135,57 @@ export class JointDragControls {
 
         let hoveredLink = null;
 
+        // Temporarily store and enable visibility for visual meshes to allow raycasting
+        const hiddenMeshes = [];
+        model.threeObject.traverse((child) => {
+            if (child.isMesh && !child.visible) {
+                // Check if it's a visual mesh (not collision)
+                let isInCollider = false;
+                let checkNode = child;
+                while (checkNode) {
+                    if (checkNode.isURDFCollider) {
+                        isInCollider = true;
+                        break;
+                    }
+                    checkNode = checkNode.parent;
+                }
+                if (!isInCollider) {
+                    child.visible = true;
+                    hiddenMeshes.push(child);
+                }
+            }
+        });
+
         // Only detect robot model, not entire scene
         const intersections = raycaster.intersectObject(model.threeObject, true);
 
-        // Filter out collision meshes and invisible objects
+        // Restore visibility
+        hiddenMeshes.forEach(mesh => {
+            mesh.visible = false;
+        });
+
+        // Filter out collision meshes (but allow invisible visual meshes for interaction)
         const validIntersections = intersections.filter(intersect => {
             const obj = intersect.object;
             // Skip collision meshes
             if (obj.isURDFCollider || obj.userData?.isCollision || obj.userData?.isCollisionGeom) {
                 return false;
             }
-            // Only check visible meshes
-            return obj.isMesh && obj.visible;
+            // Check if object is in collision hierarchy
+            let isInCollider = false;
+            let checkNode = obj;
+            while (checkNode) {
+                if (checkNode.isURDFCollider) {
+                    isInCollider = true;
+                    break;
+                }
+                checkNode = checkNode.parent;
+            }
+            if (isInCollider) {
+                return false;
+            }
+            // Allow all visual meshes
+            return obj.isMesh;
         });
 
         // Like urdf-loaders, only detect first intersecting object (closest)
@@ -400,17 +441,56 @@ export class PointerJointDragControls extends JointDragControls {
             // Check if ray intersects with the model before disabling camera controls
             if (!this.model || !this.model.threeObject) return;
 
+            // Temporarily store and enable visibility for visual meshes to allow raycasting
+            const hiddenMeshes = [];
+            this.model.threeObject.traverse((child) => {
+                if (child.isMesh && !child.visible) {
+                    // Check if it's a visual mesh (not collision)
+                    let isInCollider = false;
+                    let checkNode = child;
+                    while (checkNode) {
+                        if (checkNode.isURDFCollider) {
+                            isInCollider = true;
+                            break;
+                        }
+                        checkNode = checkNode.parent;
+                    }
+                    if (!isInCollider) {
+                        child.visible = true;
+                        hiddenMeshes.push(child);
+                    }
+                }
+            });
+
             const intersections = raycaster.intersectObject(this.model.threeObject, true);
 
-            // Filter out collision meshes and invisible objects
+            // Restore visibility
+            hiddenMeshes.forEach(mesh => {
+                mesh.visible = false;
+            });
+
+            // Filter out collision meshes (but allow invisible visual meshes for interaction)
             const validIntersections = intersections.filter(intersect => {
                 const obj = intersect.object;
                 // Skip collision meshes
                 if (obj.isURDFCollider || obj.userData?.isCollision || obj.userData?.isCollisionGeom) {
                     return false;
                 }
-                // Only check visible meshes
-                return obj.isMesh && obj.visible;
+                // Check if object is in collision hierarchy
+                let isInCollider = false;
+                let checkNode = obj;
+                while (checkNode) {
+                    if (checkNode.isURDFCollider) {
+                        isInCollider = true;
+                        break;
+                    }
+                    checkNode = checkNode.parent;
+                }
+                if (isInCollider) {
+                    return false;
+                }
+                // Allow all visual meshes
+                return obj.isMesh;
             });
 
             const hitLink = validIntersections.length > 0 ? findParentLink(validIntersections[0].object, this.model) : null;

@@ -56,7 +56,7 @@ export class InertialVisualization {
             const mesh = new THREE.Mesh(geometry, part.material);
             mesh.castShadow = false;
             mesh.receiveShadow = false;
-            mesh.raycast = () => {};
+            // Allow raycasting so COM can be selected for dragging
             comGroup.add(mesh);
         });
 
@@ -326,9 +326,7 @@ export class InertialVisualization {
         inertiaBox.castShadow = false;
         inertiaBox.receiveShadow = false;
 
-        // Disable raycasting for inertia box (don't interfere with dragging)
-        inertiaBox.raycast = () => {};
-
+        // Allow raycasting so inertia box can be selected for dragging
         // Mark as inertia box
         inertiaBox.userData.isInertiaBox = true;
 
