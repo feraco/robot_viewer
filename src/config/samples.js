@@ -1,8 +1,8 @@
 export const SAMPLE_MODELS = [
   {
     name: 'Unitree G1',
-    url: 'https://raw.githubusercontent.com/unitreerobotics/unitree_mujoco/refs/heads/main/unitree_robots/g1/scene_29dof.xml',
-    type: 'xml'
+    url: 'https://raw.githubusercontent.com/unitreerobotics/unitree_ros/master/robots/g1_description/urdf/g1.urdf',
+    type: 'urdf'
   },
   {
     name: 'Unitree H1',
@@ -28,13 +28,8 @@ export const SAMPLE_MODELS = [
 
 export const SAMPLE_MOTIONS = [
   {
-    name: 'G1 Walk Forward',
-    url: 'https://example.com/motions/g1_walk_forward.csv',
+    name: 'G1 Dance 1',
+    url: 'https://huggingface.co/datasets/lvhaidong/LAFAN1_Retargeting_Dataset/resolve/main/g1/dance1_subject1.csv',
     robotType: 'G1'
-  },
-  {
-    name: 'H1 Stand Up',
-    url: 'https://example.com/motions/h1_stand_up.csv',
-    robotType: 'H1'
   }
 ];
