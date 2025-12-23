@@ -9,6 +9,7 @@ import { MathUtils } from '../utils/MathUtils.js';
 import { CoordinateAxesManager } from './CoordinateAxesManager.js';
 import { InertialVisualization } from './InertialVisualization.js';
 import { VisualizationManager } from './VisualizationManager.js';
+import { MotionControllerManager } from './MotionControllerManager.js';
 
 export class MujocoSimulationManager {
     constructor(sceneManager) {
@@ -24,6 +25,7 @@ export class MujocoSimulationManager {
         this.mujocoRoot = null;
         this.dragStateManager = null;
         this.originalModel = null;  // Save original UnifiedRobotModel
+        this.motionController = null;  // Motion control manager
 
         // Simulation parameters
         this.params = {
@@ -33,6 +35,7 @@ export class MujocoSimulationManager {
         };
 
         this.mujoco_time = 0.0;
+        this.lastUpdateTime = 0.0;
         this.tmpVec = new THREE.Vector3();
         this.tmpQuat = new THREE.Quaternion();
 
@@ -162,6 +165,11 @@ export class MujocoSimulationManager {
                     canvas,
                     this.sceneManager.controls
                 );
+            }
+
+            // Create motion controller
+            if (!this.motionController) {
+                this.motionController = new MotionControllerManager(this);
             }
 
             return null;
@@ -1132,6 +1140,15 @@ export class MujocoSimulationManager {
         if (!this.isLoaded || !this.model) {
             return;
         }
+
+        // Update motion controller
+        if (this.motionController) {
+            const deltaTime = this.lastUpdateTime > 0 ? (timeMS - this.lastUpdateTime) / 1000.0 : 0;
+            if (deltaTime > 0) {
+                this.motionController.update(deltaTime);
+            }
+        }
+        this.lastUpdateTime = timeMS;
 
         if (!this.params.paused) {
             // Get timestep (compatible with old and new API)

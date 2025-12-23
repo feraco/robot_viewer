@@ -15,6 +15,7 @@ import { CodeEditorManager } from './controllers/CodeEditorManager.js';
 import { MeasurementController } from './controllers/MeasurementController.js';
 import { USDViewerManager } from './renderer/USDViewerManager.js';
 import { MujocoSimulationManager } from './renderer/MujocoSimulationManager.js';
+import { MotionControlsUI } from './ui/MotionControlsUI.js';
 import { i18n } from './utils/i18n.js';
 
 // Expose d3 globally for PanelManager
@@ -37,6 +38,7 @@ class App {
         this.measurementController = null;
         this.usdViewerManager = null;
         this.mujocoSimulationManager = null;
+        this.motionControlsUI = null;
         this.currentModel = null;
         this.currentMJCFFile = null;
         this.currentMJCFModel = null;
@@ -925,6 +927,15 @@ class App {
 
                 // Start simulation immediately
                 this.mujocoSimulationManager.startSimulation();
+
+                // Initialize motion controls UI
+                if (this.mujocoSimulationManager.motionController && !this.motionControlsUI) {
+                    this.motionControlsUI = new MotionControlsUI(this.mujocoSimulationManager.motionController);
+                    const panel = this.motionControlsUI.createPanel();
+                    document.body.appendChild(panel);
+                    this.motionControlsUI.show();
+                }
+
                 return true;
             } catch (error) {
                 console.error('MuJoCo scene loading failed:', error);
