@@ -1141,10 +1141,10 @@ export class MujocoSimulationManager {
             return;
         }
 
-        // Update motion controller
+        // Update motion controller (works even when simulation is paused)
         if (this.motionController) {
             const deltaTime = this.lastUpdateTime > 0 ? (timeMS - this.lastUpdateTime) / 1000.0 : 0;
-            if (deltaTime > 0) {
+            if (deltaTime > 0 && deltaTime < 1.0) {
                 this.motionController.update(deltaTime);
             }
         }

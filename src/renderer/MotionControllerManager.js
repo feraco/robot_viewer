@@ -13,6 +13,29 @@ export class MotionControllerManager {
     this.walkingGait = new WalkingGaitGenerator();
 
     this.initializePresets();
+    this.logAvailableActuators();
+  }
+
+  logAvailableActuators() {
+    if (!this.simulationManager || !this.simulationManager.mujoco || !this.simulationManager.model) {
+      return;
+    }
+
+    const model = this.simulationManager.model;
+    const actuators = [];
+
+    for (let i = 0; i < model.nu; i++) {
+      const actuatorName = this.simulationManager.mujoco.mj_id2name(
+        model.ptr,
+        this.simulationManager.mujoco.mjtObj.mjOBJ_ACTUATOR.value,
+        i
+      );
+      if (actuatorName) {
+        actuators.push(actuatorName);
+      }
+    }
+
+    console.log(`Motion Controller: Found ${actuators.length} actuators:`, actuators);
   }
 
   initializePresets() {
@@ -210,6 +233,9 @@ export class MotionControllerManager {
       return false;
     }
 
+    console.log(`Starting motion: ${preset.name} (${presetId})`);
+    console.log(`Motion type: ${preset.type}, Duration: ${preset.duration}`);
+
     this.activeMotion = {
       preset,
       presetId,
@@ -220,6 +246,8 @@ export class MotionControllerManager {
         onComplete: options.onComplete
       }
     };
+
+    console.log(`Start positions:`, this.activeMotion.startPositions);
 
     this.currentTime = 0;
     this.isPlaying = true;
@@ -252,9 +280,15 @@ export class MotionControllerManager {
 
     const positions = {};
     const model = this.simulationManager.model;
-    const data = this.simulationManager.data;
+    const isOldAPI = this.simulationManager.isOldAPI;
 
-    if (!model || !data) return positions;
+    if (!model) return positions;
+
+    const qpos = isOldAPI ?
+      this.simulationManager.data?.qpos :
+      this.simulationManager.simulation?.qpos;
+
+    if (!qpos) return positions;
 
     for (let i = 0; i < model.njnt; i++) {
       const jointName = this.simulationManager.mujoco.mj_id2name(
@@ -265,7 +299,7 @@ export class MotionControllerManager {
 
       if (jointName) {
         const qposAdr = model.jnt_qposadr[i];
-        positions[jointName] = data.qpos[qposAdr];
+        positions[jointName] = qpos[qposAdr];
       }
     }
 
@@ -301,13 +335,29 @@ export class MotionControllerManager {
 
   setJointControl(jointName, value) {
     if (!this.simulationManager || !this.simulationManager.mujoco) {
+      console.warn('Motion controller: simulation manager or mujoco not available');
       return false;
     }
 
     const model = this.simulationManager.model;
-    const data = this.simulationManager.data;
+    const isOldAPI = this.simulationManager.isOldAPI;
 
-    if (!model || !data) return false;
+    if (!model) {
+      console.warn('Motion controller: model not available');
+      return false;
+    }
+
+    const ctrl = isOldAPI ?
+      this.simulationManager.data?.ctrl :
+      this.simulationManager.simulation?.ctrl;
+
+    if (!ctrl) {
+      console.warn('Motion controller: control array not available');
+      return false;
+    }
+
+    const jointBaseName = jointName.replace('_joint', '').replace('_', '');
+    let found = false;
 
     for (let i = 0; i < model.nu; i++) {
       const actuatorName = this.simulationManager.mujoco.mj_id2name(
@@ -316,13 +366,24 @@ export class MotionControllerManager {
         i
       );
 
-      if (actuatorName && actuatorName.includes(jointName.replace('_joint', ''))) {
-        data.ctrl[i] = value;
-        return true;
+      if (actuatorName) {
+        const actuatorBaseName = actuatorName.replace('_', '').toLowerCase();
+        const jointNameLower = jointBaseName.toLowerCase();
+
+        if (actuatorBaseName.includes(jointNameLower) ||
+            actuatorName.toLowerCase().includes(jointName.toLowerCase())) {
+          ctrl[i] = value;
+          found = true;
+          break;
+        }
       }
     }
 
-    return false;
+    if (!found && model.nu > 0) {
+      console.warn(`Motion controller: No actuator found for joint "${jointName}"`);
+    }
+
+    return found;
   }
 
   update(deltaTime) {
@@ -335,7 +396,7 @@ export class MotionControllerManager {
     const preset = this.activeMotion.preset;
     const duration = preset.duration;
 
-    if (this.currentTime >= duration) {
+    if (this.currentTime >= duration && duration !== Infinity) {
       if (this.loopEnabled) {
         this.currentTime = 0;
       } else {
@@ -353,6 +414,25 @@ export class MotionControllerManager {
       this.applyKeyframeMotion(preset, this.currentTime);
     } else if (preset.type === 'procedural') {
       this.applyProceduralMotion(preset, this.currentTime);
+    }
+
+    this.forwardKinematics();
+  }
+
+  forwardKinematics() {
+    if (!this.simulationManager || !this.simulationManager.mujoco) {
+      return;
+    }
+
+    const model = this.simulationManager.model;
+    const isOldAPI = this.simulationManager.isOldAPI;
+
+    if (!model) return;
+
+    if (isOldAPI && this.simulationManager.data) {
+      this.simulationManager.mujoco.mj_forward(model, this.simulationManager.data);
+    } else if (!isOldAPI && this.simulationManager.simulation) {
+      this.simulationManager.simulation.forward();
     }
   }
 
