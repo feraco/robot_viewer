@@ -285,11 +285,6 @@ export class CSVMotionUI {
   }
 
   showMotionInfo(motionData) {
-    const panel = document.getElementById('floating-csv-motion-panel');
-    if (panel) {
-      panel.style.display = '';
-    }
-
     this.elements.motionInfo.style.display = 'block';
     this.elements.motionInfo.textContent =
       `${motionData.robotType} • ${motionData.frameCount} frames • ${motionData.duration.toFixed(2)}s @ ${motionData.fps}fps`;
