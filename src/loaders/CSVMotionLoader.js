@@ -107,9 +107,11 @@ export class CSVMotionLoader {
     for (const line of lines) {
       if (!line.trim()) continue;
 
-      const values = line.split(',').map(v => parseFloat(v.trim()));
+      // Detect separator: use comma if present, otherwise space/tab
+      const separator = line.includes(',') ? ',' : /\s+/;
+      const values = line.split(separator).map(v => parseFloat(v.trim())).filter(v => !isNaN(v));
 
-      if (values.length === 0 || values.some(isNaN)) {
+      if (values.length === 0) {
         continue;
       }
 
@@ -160,7 +162,9 @@ export class CSVMotionLoader {
     if (lines.length === 0) return 'G1';
 
     const firstLine = lines[0];
-    const valueCount = firstLine.split(',').length;
+    // Detect separator: use comma if present, otherwise space/tab
+    const separator = firstLine.includes(',') ? ',' : /\s+/;
+    const valueCount = firstLine.split(separator).filter(v => v.trim()).length;
 
     if (valueCount === 37) return 'G1';
     if (valueCount === 35) return 'H1_2';
