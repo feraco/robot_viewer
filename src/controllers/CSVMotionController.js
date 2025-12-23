@@ -1,8 +1,10 @@
 import * as THREE from 'three';
+import { MJCFAdapter } from '../adapters/MJCFAdapter.js';
 
 export class CSVMotionController {
   constructor(robotModel) {
     this.robotModel = robotModel;
+    this.modelType = this.detectModelType();
     this.motionData = null;
     this.currentFrame = 0;
     this.isPlaying = false;
@@ -135,6 +137,14 @@ export class CSVMotionController {
     }
   }
 
+  detectModelType() {
+    if (!this.robotModel || !this.robotModel.threeObject) return 'unknown';
+    if (this.robotModel.threeObject.userData && this.robotModel.threeObject.userData.type) {
+      return this.robotModel.threeObject.userData.type;
+    }
+    return 'unknown';
+  }
+
   setJointAngle(jointName, angle) {
     if (!this.robotModel || !this.robotModel.joints) return;
 
@@ -143,10 +153,12 @@ export class CSVMotionController {
       return;
     }
 
-    if (joint.threeObject) {
+    if (this.modelType === 'mjcf') {
+      MJCFAdapter.setJointAngle(joint, angle);
+    } else if (joint.threeObject) {
       if (typeof joint.threeObject.setJointValue === 'function') {
         joint.threeObject.setJointValue(angle);
-      } else if (joint.threeObject.setAngle !== undefined) {
+      } else if (joint.threeObject.angle !== undefined) {
         joint.threeObject.angle = angle;
       } else if (joint.threeObject.jointValue !== undefined) {
         joint.threeObject.jointValue = angle;
