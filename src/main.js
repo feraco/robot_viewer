@@ -930,9 +930,14 @@ class App {
 
                 // Initialize motion controls UI
                 if (this.mujocoSimulationManager.motionController && !this.motionControlsUI) {
+                    console.log('Initializing Motion Controls UI...');
                     this.motionControlsUI = new MotionControlsUI(this.mujocoSimulationManager.motionController);
                     const panel = this.motionControlsUI.createPanel();
                     document.body.appendChild(panel);
+                    console.log('Motion Controls UI added to document body');
+                    this.motionControlsUI.show();
+                } else if (this.motionControlsUI) {
+                    console.log('Motion Controls UI already exists, showing it');
                     this.motionControlsUI.show();
                 }
 
@@ -951,6 +956,15 @@ class App {
             // Toggle original model visibility
             if (this.currentModel && this.currentModel.threeObject) {
                 this.currentModel.threeObject.visible = !isSimulating;
+            }
+
+            // Show/hide motion controls UI based on simulation state
+            if (this.motionControlsUI) {
+                if (isSimulating) {
+                    this.motionControlsUI.show();
+                } else {
+                    this.motionControlsUI.hide();
+                }
             }
 
             return isSimulating;

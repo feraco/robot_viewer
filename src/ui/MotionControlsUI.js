@@ -30,6 +30,7 @@ export class MotionControlsUI {
       min-width: 300px;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
       z-index: 1000;
+      display: block;
     `;
 
     const header = document.createElement('div');
@@ -254,6 +255,7 @@ export class MotionControlsUI {
     panel.appendChild(this.statusText);
 
     this.panel = panel;
+    console.log('Motion Controls UI panel created and ready');
     return panel;
   }
 
@@ -353,12 +355,16 @@ export class MotionControlsUI {
   show() {
     if (this.panel) {
       this.panel.style.display = 'block';
+      console.log('Motion Controls UI shown');
+    } else {
+      console.warn('Motion Controls UI: panel not initialized');
     }
   }
 
   hide() {
     if (this.panel) {
       this.panel.style.display = 'none';
+      console.log('Motion Controls UI hidden');
     }
   }
 
