@@ -19,34 +19,48 @@ export class MotionControllerManager {
   logAvailableActuators() {
     try {
       if (!this.simulationManager || !this.simulationManager.mujoco || !this.simulationManager.model) {
-        console.log('Motion Controller: Simulation not fully initialized yet');
+        console.log('Motion Controller: Waiting for MuJoCo simulation to load');
         return;
       }
 
       const model = this.simulationManager.model;
       const mujoco = this.simulationManager.mujoco;
 
-      if (!model.ptr || !mujoco.mjtObj || !mujoco.mjtObj.mjOBJ_ACTUATOR) {
-        console.log('Motion Controller: Model or MuJoCo objects not ready');
+      if (!model.nu || model.nu === 0) {
+        console.log('Motion Controller: No actuators defined in model. Motion presets will not work.');
+        console.log('To use motion presets, load an MJCF file with actuators defined.');
+        return;
+      }
+
+      if (!mujoco.mj_id2name) {
+        console.log('Motion Controller: MuJoCo API not fully loaded');
         return;
       }
 
       const actuators = [];
+      const modelPtr = model.ptr || model;
+      const objType = mujoco.mjtObj?.mjOBJ_ACTUATOR?.value ||
+                      mujoco.mjtObj?.mjOBJ_ACTUATOR ||
+                      2;
 
       for (let i = 0; i < model.nu; i++) {
-        const actuatorName = mujoco.mj_id2name(
-          model.ptr,
-          mujoco.mjtObj.mjOBJ_ACTUATOR.value,
-          i
-        );
-        if (actuatorName) {
-          actuators.push(actuatorName);
+        try {
+          const actuatorName = mujoco.mj_id2name(modelPtr, objType, i);
+          if (actuatorName) {
+            actuators.push(actuatorName);
+          }
+        } catch (e) {
+          continue;
         }
       }
 
-      console.log(`Motion Controller: Found ${actuators.length} actuators:`, actuators);
+      if (actuators.length > 0) {
+        console.log(`Motion Controller: Found ${actuators.length} actuators:`, actuators);
+      } else {
+        console.log('Motion Controller: No actuators found. Motion presets will not work.');
+      }
     } catch (error) {
-      console.warn('Motion Controller: Could not log actuators', error);
+      console.log('Motion Controller: Could not enumerate actuators');
     }
   }
 
@@ -239,12 +253,8 @@ export class MotionControllerManager {
   }
 
   playMotion(presetId, options = {}) {
-    if (!this.simulationManager ||
-        !this.simulationManager.mujoco ||
-        !this.simulationManager.model ||
-        !this.simulationManager.model.ptr ||
-        !this.simulationManager.mujoco.mjtObj) {
-      console.warn('Cannot play motion: simulation not ready');
+    if (!this.simulationManager || !this.simulationManager.mujoco || !this.simulationManager.model) {
+      console.warn('Cannot play motion: MuJoCo simulation not loaded. Please load an MJCF file and enable simulation.');
       return false;
     }
 
@@ -370,7 +380,6 @@ export class MotionControllerManager {
 
   setJointControl(jointName, value) {
     if (!this.simulationManager || !this.simulationManager.mujoco) {
-      console.warn('Motion controller: simulation manager or mujoco not available');
       return false;
     }
 
@@ -378,8 +387,7 @@ export class MotionControllerManager {
     const mujoco = this.simulationManager.mujoco;
     const isOldAPI = this.simulationManager.isOldAPI;
 
-    if (!model || !model.ptr || !mujoco.mjtObj || !mujoco.mjtObj.mjOBJ_ACTUATOR) {
-      console.warn('Motion controller: model or MuJoCo objects not available');
+    if (!model) {
       return false;
     }
 
@@ -388,7 +396,10 @@ export class MotionControllerManager {
       this.simulationManager.simulation?.ctrl;
 
     if (!ctrl) {
-      console.warn('Motion controller: control array not available');
+      return false;
+    }
+
+    if (!model.nu || model.nu === 0) {
       return false;
     }
 
@@ -396,12 +407,24 @@ export class MotionControllerManager {
     let found = false;
 
     try {
+      const modelPtr = model.ptr || model;
+
+      if (!mujoco.mj_id2name) {
+        return false;
+      }
+
+      const objType = mujoco.mjtObj?.mjOBJ_ACTUATOR?.value ||
+                      mujoco.mjtObj?.mjOBJ_ACTUATOR ||
+                      2;
+
       for (let i = 0; i < model.nu; i++) {
-        const actuatorName = mujoco.mj_id2name(
-          model.ptr,
-          mujoco.mjtObj.mjOBJ_ACTUATOR.value,
-          i
-        );
+        let actuatorName;
+
+        try {
+          actuatorName = mujoco.mj_id2name(modelPtr, objType, i);
+        } catch (e) {
+          continue;
+        }
 
         if (actuatorName) {
           const actuatorBaseName = actuatorName.replace('_', '').toLowerCase();
@@ -416,12 +439,7 @@ export class MotionControllerManager {
         }
       }
     } catch (error) {
-      console.warn('Error setting joint control:', error);
       return false;
-    }
-
-    if (!found && model.nu > 0) {
-      console.warn(`Motion controller: No actuator found for joint "${jointName}"`);
     }
 
     return found;
