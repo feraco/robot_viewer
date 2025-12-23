@@ -239,6 +239,15 @@ export class MotionControllerManager {
   }
 
   playMotion(presetId, options = {}) {
+    if (!this.simulationManager ||
+        !this.simulationManager.mujoco ||
+        !this.simulationManager.model ||
+        !this.simulationManager.model.ptr ||
+        !this.simulationManager.mujoco.mjtObj) {
+      console.warn('Cannot play motion: simulation not ready');
+      return false;
+    }
+
     const preset = this.getPreset(presetId);
     if (!preset) {
       console.warn(`Motion preset '${presetId}' not found`);
