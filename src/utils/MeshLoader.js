@@ -112,7 +112,7 @@ export async function loadMeshFile(meshPath, fileMap) {
         }
 
         // If file not found in fileMap, check if we have a base URL for remote loading
-        if (!file && fileMap.has('__baseUrl__')) {
+        if (!file && fileMap && fileMap.has('__baseUrl__')) {
             const baseUrl = fileMap.get('__baseUrl__');
             return await loadMeshFromUrl(baseUrl + meshPath);
         }
@@ -123,7 +123,7 @@ export async function loadMeshFile(meshPath, fileMap) {
         }
 
         // Determine file extension
-        const fileExt = file.name ? file.name.toLowerCase().split('.').pop() : meshPath.toLowerCase().split('.').pop();
+        const fileExt = file.name.toLowerCase().split('.').pop();
         const url = URL.createObjectURL(file);
 
         try {
