@@ -292,9 +292,12 @@ export class MotionControllerManager {
 
     const positions = {};
     const model = this.simulationManager.model;
+    const mujoco = this.simulationManager.mujoco;
     const isOldAPI = this.simulationManager.isOldAPI;
 
-    if (!model) return positions;
+    if (!model || !model.ptr || !mujoco.mjtObj || !mujoco.mjtObj.mjOBJ_JOINT) {
+      return positions;
+    }
 
     const qpos = isOldAPI ?
       this.simulationManager.data?.qpos :
@@ -302,17 +305,21 @@ export class MotionControllerManager {
 
     if (!qpos) return positions;
 
-    for (let i = 0; i < model.njnt; i++) {
-      const jointName = this.simulationManager.mujoco.mj_id2name(
-        model.ptr,
-        this.simulationManager.mujoco.mjtObj.mjOBJ_JOINT.value,
-        i
-      );
+    try {
+      for (let i = 0; i < model.njnt; i++) {
+        const jointName = mujoco.mj_id2name(
+          model.ptr,
+          mujoco.mjtObj.mjOBJ_JOINT.value,
+          i
+        );
 
-      if (jointName) {
-        const qposAdr = model.jnt_qposadr[i];
-        positions[jointName] = qpos[qposAdr];
+        if (jointName) {
+          const qposAdr = model.jnt_qposadr[i];
+          positions[jointName] = qpos[qposAdr];
+        }
       }
+    } catch (error) {
+      console.warn('Error getting joint positions:', error);
     }
 
     return positions;
@@ -324,22 +331,29 @@ export class MotionControllerManager {
     }
 
     const model = this.simulationManager.model;
+    const mujoco = this.simulationManager.mujoco;
     const data = this.simulationManager.data;
 
-    if (!model || !data) return false;
+    if (!model || !model.ptr || !data || !mujoco.mjtObj || !mujoco.mjtObj.mjOBJ_JOINT) {
+      return false;
+    }
 
-    for (let i = 0; i < model.njnt; i++) {
-      const name = this.simulationManager.mujoco.mj_id2name(
-        model.ptr,
-        this.simulationManager.mujoco.mjtObj.mjOBJ_JOINT.value,
-        i
-      );
+    try {
+      for (let i = 0; i < model.njnt; i++) {
+        const name = mujoco.mj_id2name(
+          model.ptr,
+          mujoco.mjtObj.mjOBJ_JOINT.value,
+          i
+        );
 
-      if (name === jointName) {
-        const qposAdr = model.jnt_qposadr[i];
-        data.qpos[qposAdr] = position;
-        return true;
+        if (name === jointName) {
+          const qposAdr = model.jnt_qposadr[i];
+          data.qpos[qposAdr] = position;
+          return true;
+        }
       }
+    } catch (error) {
+      console.warn('Error setting joint position:', error);
     }
 
     return false;
@@ -352,10 +366,11 @@ export class MotionControllerManager {
     }
 
     const model = this.simulationManager.model;
+    const mujoco = this.simulationManager.mujoco;
     const isOldAPI = this.simulationManager.isOldAPI;
 
-    if (!model) {
-      console.warn('Motion controller: model not available');
+    if (!model || !model.ptr || !mujoco.mjtObj || !mujoco.mjtObj.mjOBJ_ACTUATOR) {
+      console.warn('Motion controller: model or MuJoCo objects not available');
       return false;
     }
 
@@ -371,24 +386,29 @@ export class MotionControllerManager {
     const jointBaseName = jointName.replace('_joint', '').replace('_', '');
     let found = false;
 
-    for (let i = 0; i < model.nu; i++) {
-      const actuatorName = this.simulationManager.mujoco.mj_id2name(
-        model.ptr,
-        this.simulationManager.mujoco.mjtObj.mjOBJ_ACTUATOR.value,
-        i
-      );
+    try {
+      for (let i = 0; i < model.nu; i++) {
+        const actuatorName = mujoco.mj_id2name(
+          model.ptr,
+          mujoco.mjtObj.mjOBJ_ACTUATOR.value,
+          i
+        );
 
-      if (actuatorName) {
-        const actuatorBaseName = actuatorName.replace('_', '').toLowerCase();
-        const jointNameLower = jointBaseName.toLowerCase();
+        if (actuatorName) {
+          const actuatorBaseName = actuatorName.replace('_', '').toLowerCase();
+          const jointNameLower = jointBaseName.toLowerCase();
 
-        if (actuatorBaseName.includes(jointNameLower) ||
-            actuatorName.toLowerCase().includes(jointName.toLowerCase())) {
-          ctrl[i] = value;
-          found = true;
-          break;
+          if (actuatorBaseName.includes(jointNameLower) ||
+              actuatorName.toLowerCase().includes(jointName.toLowerCase())) {
+            ctrl[i] = value;
+            found = true;
+            break;
+          }
         }
       }
+    } catch (error) {
+      console.warn('Error setting joint control:', error);
+      return false;
     }
 
     if (!found && model.nu > 0) {
