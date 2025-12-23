@@ -18,6 +18,7 @@ import { MujocoSimulationManager } from './renderer/MujocoSimulationManager.js';
 import { MotionControlsUI } from './ui/MotionControlsUI.js';
 import { CSVMotionController } from './controllers/CSVMotionController.js';
 import { CSVMotionUI } from './ui/CSVMotionUI.js';
+import { SampleLoader } from './loaders/SampleLoader.js';
 import { i18n } from './utils/i18n.js';
 
 // Expose d3 globally for PanelManager
@@ -43,6 +44,7 @@ class App {
         this.motionControlsUI = null;
         this.csvMotionController = null;
         this.csvMotionUI = null;
+        this.sampleLoader = null;
         this.currentModel = null;
         this.currentMJCFFile = null;
         this.currentMJCFModel = null;
@@ -204,6 +206,10 @@ class App {
 
             // Initialize MuJoCo simulation manager
             this.mujocoSimulationManager = new MujocoSimulationManager(this.sceneManager);
+
+            // Initialize sample loader
+            this.sampleLoader = new SampleLoader(this.fileHandler, this.csvMotionController);
+            this.sampleLoader.initializeSampleSelectors();
 
             // Setup model tree panel
             this.setupModelTreePanel();
