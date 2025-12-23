@@ -15,17 +15,16 @@ export class CSVMotionUI {
     const panel = document.createElement('div');
     panel.className = 'csv-motion-panel';
     panel.style.cssText = `
-      background: #2a2a2a;
-      border-radius: 8px;
-      padding: 15px;
-      margin-bottom: 10px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      height: 100%;
     `;
 
     panel.innerHTML = `
-      <div style="margin-bottom: 15px;">
-        <h3 style="margin: 0 0 10px 0; color: #fff; font-size: 14px;">CSV Motion</h3>
-
-        <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+      <div>
+        <div style="display: flex; gap: 8px; margin-bottom: 12px;">
           <input
             type="file"
             id="csv-motion-file"
@@ -36,13 +35,15 @@ export class CSVMotionUI {
             id="csv-load-btn"
             style="
               flex: 1;
-              padding: 8px;
-              background: #4a90e2;
+              padding: 8px 12px;
+              background: var(--accent);
               color: white;
               border: none;
-              border-radius: 4px;
+              border-radius: 8px;
               cursor: pointer;
               font-size: 12px;
+              font-weight: 500;
+              transition: all 0.2s;
             "
           >
             Load CSV
@@ -51,12 +52,13 @@ export class CSVMotionUI {
           <select
             id="csv-robot-type"
             style="
-              padding: 8px;
-              background: #3a3a3a;
-              color: white;
-              border: 1px solid #555;
-              border-radius: 4px;
+              padding: 8px 12px;
+              background: rgba(255, 255, 255, 0.08);
+              color: var(--text-primary);
+              border: 1px solid var(--glass-border);
+              border-radius: 8px;
               font-size: 12px;
+              cursor: pointer;
             "
           >
             <option value="auto">Auto-detect</option>
@@ -67,54 +69,62 @@ export class CSVMotionUI {
         </div>
 
         <div id="csv-motion-info" style="
-          color: #999;
+          color: var(--text-tertiary);
           font-size: 11px;
-          margin-bottom: 10px;
+          padding: 8px;
+          background: rgba(255, 255, 255, 0.05);
+          border-radius: 6px;
+          margin-bottom: 12px;
           display: none;
         "></div>
       </div>
 
-      <div id="csv-playback-controls" style="display: none;">
-        <div style="display: flex; gap: 8px; margin-bottom: 10px; align-items: center;">
+      <div id="csv-playback-controls" style="display: none; flex: 1; display: flex; flex-direction: column; gap: 12px;">
+        <div style="display: flex; gap: 8px; align-items: center;">
           <button id="csv-play-btn" style="
             padding: 8px 16px;
             background: #4caf50;
             color: white;
             border: none;
-            border-radius: 4px;
+            border-radius: 8px;
             cursor: pointer;
             font-size: 12px;
+            font-weight: 500;
+            transition: all 0.2s;
           ">▶ Play</button>
 
           <button id="csv-stop-btn" style="
             padding: 8px 16px;
-            background: #f44336;
-            color: white;
-            border: none;
-            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-primary);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
             cursor: pointer;
             font-size: 12px;
+            font-weight: 500;
+            transition: all 0.2s;
           ">■ Stop</button>
 
           <label style="
             display: flex;
             align-items: center;
-            gap: 5px;
-            color: #ccc;
+            gap: 6px;
+            color: var(--text-secondary);
             font-size: 11px;
             margin-left: auto;
+            cursor: pointer;
           ">
-            <input type="checkbox" id="csv-loop" checked />
+            <input type="checkbox" id="csv-loop" checked style="cursor: pointer;" />
             Loop
           </label>
         </div>
 
-        <div style="margin-bottom: 10px;">
+        <div>
           <div style="
             display: flex;
             justify-content: space-between;
-            margin-bottom: 5px;
-            color: #999;
+            margin-bottom: 8px;
+            color: var(--text-tertiary);
             font-size: 11px;
           ">
             <span id="csv-current-time">0.0s</span>
@@ -123,9 +133,10 @@ export class CSVMotionUI {
 
           <div id="csv-timeline-container" style="
             position: relative;
-            height: 30px;
-            background: #1a1a1a;
-            border-radius: 4px;
+            height: 32px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
             cursor: pointer;
             overflow: hidden;
           ">
@@ -134,27 +145,29 @@ export class CSVMotionUI {
               left: 0;
               top: 0;
               height: 100%;
-              background: #4a90e2;
+              background: var(--accent);
               width: 0%;
               transition: width 0.05s linear;
+              opacity: 0.3;
             "></div>
             <div id="csv-timeline-handle" style="
               position: absolute;
               left: 0;
               top: 50%;
               transform: translate(-50%, -50%);
-              width: 12px;
-              height: 12px;
-              background: white;
+              width: 14px;
+              height: 14px;
+              background: var(--accent);
+              border: 2px solid white;
               border-radius: 50%;
               cursor: grab;
-              box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+              box-shadow: 0 2px 8px rgba(0,0,0,0.3);
             "></div>
           </div>
         </div>
 
-        <div style="display: flex; gap: 10px; align-items: center;">
-          <label style="color: #ccc; font-size: 11px;">Speed:</label>
+        <div style="display: flex; gap: 12px; align-items: center;">
+          <label style="color: var(--text-secondary); font-size: 11px; font-weight: 500;">Speed:</label>
           <input
             type="range"
             id="csv-speed"
@@ -162,12 +175,13 @@ export class CSVMotionUI {
             max="3"
             step="0.1"
             value="1"
-            style="flex: 1;"
+            style="flex: 1; cursor: pointer;"
           />
           <span id="csv-speed-value" style="
-            color: #ccc;
+            color: var(--text-primary);
             font-size: 11px;
-            min-width: 35px;
+            min-width: 38px;
+            font-weight: 500;
           ">1.0x</span>
         </div>
       </div>
@@ -271,6 +285,11 @@ export class CSVMotionUI {
   }
 
   showMotionInfo(motionData) {
+    const panel = document.getElementById('floating-csv-motion-panel');
+    if (panel) {
+      panel.style.display = '';
+    }
+
     this.elements.motionInfo.style.display = 'block';
     this.elements.motionInfo.textContent =
       `${motionData.robotType} • ${motionData.frameCount} frames • ${motionData.duration.toFixed(2)}s @ ${motionData.fps}fps`;

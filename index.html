@@ -1324,6 +1324,28 @@
             height: calc(100vh - 100px) !important;
         }
 
+        /* CSV Motion floating panel */
+        #floating-csv-motion-panel {
+            top: calc(80px + 340px + 20px);
+            left: calc(100vw - 360px - 20px);
+            width: 360px;
+            height: calc(100vh - 80px - 340px - 40px);
+            transition: all 0.4s var(--spring);
+        }
+
+        #floating-csv-motion-panel.maximized {
+            top: 80px !important;
+            left: 20px !important;
+            width: calc(100vw - 40px) !important;
+            height: calc(100vh - 100px) !important;
+        }
+
+        #floating-csv-motion-panel .floating-panel-content {
+            display: flex;
+            flex-direction: column;
+            padding: 0;
+        }
+
         .floating-panel-header {
             padding: 16px;
             border-bottom: 0.5px solid var(--glass-border);
@@ -3015,9 +3037,18 @@
                         <button class="panel-close-btn" data-panel="floating-joints-panel">✕</button>
                     </div>
                 </div>
-                <div id="csv-motion-container"></div>
                 <div class="floating-panel-content" id="joint-controls">
                     <div class="empty-state" data-i18n="noModel"></div>
+                </div>
+            </div>
+
+            <div id="floating-csv-motion-panel" class="floating-panel" style="display: none;">
+                <div class="floating-panel-header">
+                    <span>Motion</span>
+                    <button class="panel-maximize-btn" data-panel-id="floating-csv-motion-panel">⛶</button>
+                    <button class="panel-close-btn" data-panel="floating-csv-motion-panel">✕</button>
+                </div>
+                <div class="floating-panel-content" id="csv-motion-container">
                 </div>
             </div>
 

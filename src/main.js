@@ -441,9 +441,10 @@ class App {
 
             // Initialize CSV motion controller and UI
             if (!this.csvMotionController) {
-                this.csvMotionController = new CSVMotionController(model);
+                this.csvMotionController = new CSVMotionController(model, this.sceneManager);
             } else {
                 this.csvMotionController.robotModel = model;
+                this.csvMotionController.sceneManager = this.sceneManager;
                 this.csvMotionController.currentFrame = 0;
                 this.csvMotionController.isPlaying = false;
             }

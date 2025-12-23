@@ -2,8 +2,9 @@ import * as THREE from 'three';
 import { MJCFAdapter } from '../adapters/MJCFAdapter.js';
 
 export class CSVMotionController {
-  constructor(robotModel) {
+  constructor(robotModel, sceneManager = null) {
     this.robotModel = robotModel;
+    this.sceneManager = sceneManager;
     this.modelType = this.detectModelType();
     this.motionData = null;
     this.currentFrame = 0;
@@ -134,6 +135,10 @@ export class CSVMotionController {
 
     if (this.robotModel.threeObject) {
       this.robotModel.threeObject.updateMatrixWorld(true);
+    }
+
+    if (this.sceneManager && typeof this.sceneManager.updateEnvironment === 'function') {
+      this.sceneManager.updateEnvironment(false);
     }
   }
 
