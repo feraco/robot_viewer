@@ -22,13 +22,23 @@ export class CSVMotionController {
     this.isPlaying = false;
     this.lastUpdateTime = performance.now();
 
+    const availableJoints = this.robotModel?.joints ? Array.from(this.robotModel.joints.keys()) : [];
+    const motionJoints = motionData.frames[0] ? Object.keys(motionData.frames[0].joints) : [];
+    const missingJoints = motionJoints.filter(j => !availableJoints.includes(j));
+
     console.log('CSV Motion loaded:', {
       robotType: motionData.robotType,
       frames: motionData.frameCount,
       duration: motionData.duration,
       fps: motionData.fps,
-      availableJoints: this.robotModel?.joints ? Array.from(this.robotModel.joints.keys()) : []
+      availableJoints: availableJoints,
+      motionJoints: motionJoints,
+      missingJoints: missingJoints
     });
+
+    if (missingJoints.length > 0) {
+      console.warn(`Motion data contains ${missingJoints.length} joints not found in robot model`);
+    }
 
     this.trigger('onMotionLoad', motionData);
     this.applyFrame(0);
@@ -130,14 +140,18 @@ export class CSVMotionController {
 
     const joint = this.robotModel.joints.get(jointName);
     if (!joint) {
-      console.warn(`Joint not found: ${jointName}`);
       return;
     }
 
-    if (joint.threeObject && typeof joint.threeObject.setJointValue === 'function') {
-      joint.threeObject.setJointValue(angle);
-    } else {
-      console.warn(`Joint ${jointName} does not have setJointValue method`);
+    if (joint.threeObject) {
+      if (typeof joint.threeObject.setJointValue === 'function') {
+        joint.threeObject.setJointValue(angle);
+      } else if (joint.threeObject.setAngle !== undefined) {
+        joint.threeObject.angle = angle;
+      } else if (joint.threeObject.jointValue !== undefined) {
+        joint.threeObject.jointValue = angle;
+      }
+      joint.currentValue = angle;
     }
   }
 
