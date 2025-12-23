@@ -16,6 +16,8 @@ import { MeasurementController } from './controllers/MeasurementController.js';
 import { USDViewerManager } from './renderer/USDViewerManager.js';
 import { MujocoSimulationManager } from './renderer/MujocoSimulationManager.js';
 import { MotionControlsUI } from './ui/MotionControlsUI.js';
+import { CSVMotionController } from './controllers/CSVMotionController.js';
+import { CSVMotionUI } from './ui/CSVMotionUI.js';
 import { i18n } from './utils/i18n.js';
 
 // Expose d3 globally for PanelManager
@@ -39,6 +41,8 @@ class App {
         this.usdViewerManager = null;
         this.mujocoSimulationManager = null;
         this.motionControlsUI = null;
+        this.csvMotionController = null;
+        this.csvMotionUI = null;
         this.currentModel = null;
         this.currentMJCFFile = null;
         this.currentMJCFModel = null;
@@ -434,6 +438,21 @@ class App {
             // Normal model
             this.sceneManager.setGroundVisible(true);
             this.jointControlsUI.setupJointControls(model);
+
+            // Initialize CSV motion controller and UI
+            if (!this.csvMotionController) {
+                this.csvMotionController = new CSVMotionController(model);
+            } else {
+                this.csvMotionController.robotModel = model;
+                this.csvMotionController.currentFrame = 0;
+                this.csvMotionController.isPlaying = false;
+            }
+
+            // Initialize CSV motion UI if not exists
+            const csvMotionContainer = document.getElementById('csv-motion-container');
+            if (csvMotionContainer && !this.csvMotionUI) {
+                this.csvMotionUI = new CSVMotionUI(csvMotionContainer, this.csvMotionController);
+            }
 
             // Draw model graph
             if (this.modelGraphView) {
@@ -983,6 +1002,11 @@ class App {
             // Update MuJoCo simulation
             if (this.mujocoSimulationManager && this.mujocoSimulationManager.hasScene()) {
                 this.mujocoSimulationManager.update(performance.now());
+            }
+
+            // Update CSV motion playback
+            if (this.csvMotionController && this.csvMotionController.isPlaying) {
+                this.csvMotionController.update();
             }
 
             this.sceneManager.render();
