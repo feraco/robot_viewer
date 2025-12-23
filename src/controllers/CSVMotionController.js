@@ -22,6 +22,14 @@ export class CSVMotionController {
     this.isPlaying = false;
     this.lastUpdateTime = performance.now();
 
+    console.log('CSV Motion loaded:', {
+      robotType: motionData.robotType,
+      frames: motionData.frameCount,
+      duration: motionData.duration,
+      fps: motionData.fps,
+      availableJoints: this.robotModel?.joints ? Array.from(this.robotModel.joints.keys()) : []
+    });
+
     this.trigger('onMotionLoad', motionData);
     this.applyFrame(0);
   }
@@ -91,8 +99,8 @@ export class CSVMotionController {
     const frame = this.motionData.frames[frameIndex];
     if (!frame) return;
 
-    if (this.robotModel.robot) {
-      const rootLink = this.robotModel.robot;
+    if (this.robotModel.threeObject) {
+      const rootLink = this.robotModel.threeObject;
 
       rootLink.position.set(
         frame.root.position.x,
@@ -112,18 +120,25 @@ export class CSVMotionController {
       this.setJointAngle(jointName, angle);
     }
 
-    if (this.robotModel.robot) {
-      this.robotModel.robot.updateMatrixWorld(true);
+    if (this.robotModel.threeObject) {
+      this.robotModel.threeObject.updateMatrixWorld(true);
     }
   }
 
   setJointAngle(jointName, angle) {
-    if (!this.robotModel || !this.robotModel.robot) return;
+    if (!this.robotModel || !this.robotModel.joints) return;
 
-    const joint = this.robotModel.robot.joints[jointName];
-    if (!joint) return;
+    const joint = this.robotModel.joints.get(jointName);
+    if (!joint) {
+      console.warn(`Joint not found: ${jointName}`);
+      return;
+    }
 
-    joint.setJointValue(angle);
+    if (joint.threeObject && typeof joint.threeObject.setJointValue === 'function') {
+      joint.threeObject.setJointValue(angle);
+    } else {
+      console.warn(`Joint ${jointName} does not have setJointValue method`);
+    }
   }
 
   on(event, callback) {
