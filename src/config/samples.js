@@ -1,8 +1,8 @@
 export const SAMPLE_MODELS = [
   {
     name: 'Unitree G1',
-    url: 'https://raw.githubusercontent.com/unitreerobotics/unitree_ros/master/robots/g1_description/g1_29dof.urdf',
-    type: 'urdf'
+    url: 'https://raw.githubusercontent.com/unitreerobotics/unitree_mujoco/main/unitree_robots/g1/g1_29dof.xml',
+    type: 'xml'
   },
   {
     name: 'Unitree H1',

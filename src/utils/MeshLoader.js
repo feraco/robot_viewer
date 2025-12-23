@@ -111,6 +111,12 @@ export async function loadMeshFile(meshPath, fileMap) {
             }
         }
 
+        // If file not found in fileMap, check if we have a base URL for remote loading
+        if (!file && fileMap.has('__baseUrl__')) {
+            const baseUrl = fileMap.get('__baseUrl__');
+            return await loadMeshFromUrl(baseUrl + meshPath);
+        }
+
         if (!file) {
             console.error(`Cannot find mesh file: ${meshPath}`);
             return null;
@@ -294,6 +300,61 @@ export function ensureMeshHasPhongMaterial(meshObject) {
             }
         }
     });
+}
+
+/**
+ * Load mesh file from remote URL
+ * @param {string} url - Full URL to mesh file
+ * @returns {Promise<THREE.BufferGeometry|THREE.Group|null>}
+ */
+async function loadMeshFromUrl(url) {
+    try {
+        const fileExt = url.toLowerCase().split('.').pop().split('?')[0];
+        const loaders = await getLoaders();
+        let geometry = null;
+
+        switch (fileExt) {
+            case 'stl':
+                geometry = await new Promise((resolve, reject) => {
+                    loaders.STLLoader.load(url, resolve, undefined, reject);
+                });
+                break;
+
+            case 'obj':
+                geometry = await new Promise((resolve, reject) => {
+                    loaders.OBJLoader.load(url, resolve, undefined, reject);
+                });
+                break;
+
+            case 'dae':
+                const daeResult = await new Promise((resolve, reject) => {
+                    loaders.ColladaLoader.load(url, resolve, undefined, reject);
+                });
+                geometry = daeResult ? daeResult.scene : null;
+                break;
+
+            case 'gltf':
+            case 'glb':
+                const gltfResult = await new Promise((resolve, reject) => {
+                    loaders.GLTFLoader.load(url, resolve, undefined, reject);
+                });
+                geometry = gltfResult ? gltfResult.scene : null;
+                break;
+
+            default:
+                console.warn(`Unsupported mesh file format: ${fileExt}`);
+                return null;
+        }
+
+        if (geometry && (geometry.isGroup || geometry.isObject3D || geometry.isScene)) {
+            ensureMeshHasPhongMaterial(geometry);
+        }
+
+        return geometry;
+    } catch (error) {
+        console.error(`Failed to load mesh from URL: ${url}`, error);
+        return null;
+    }
 }
 
 export { getLoaders };

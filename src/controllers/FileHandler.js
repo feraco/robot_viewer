@@ -150,6 +150,38 @@ export class FileHandler {
     }
 
     /**
+     * Handle files directly (e.g., from sample loader)
+     */
+    async handleFiles(files) {
+        this.fileMap.clear();
+
+        // Check if files have baseUrl in userData (for remote MJCF loading)
+        const baseUrl = files[0]?.userData?.baseUrl;
+        if (baseUrl) {
+            this.fileMap.set('__baseUrl__', baseUrl);
+        }
+
+        for (const file of files) {
+            const path = file.webkitRelativePath || file.name;
+            this.fileMap.set(path, file);
+        }
+
+        const loadableFiles = await this.findAllLoadableFiles(files);
+
+        if (loadableFiles.length === 0) {
+            this.onFilesLoaded?.([]);
+            return;
+        }
+
+        this.availableModels = loadableFiles;
+        this.onFilesLoaded?.(loadableFiles);
+
+        if (loadableFiles.length > 0) {
+            await this.loadFileOrMesh(loadableFiles[0]);
+        }
+    }
+
+    /**
      * Recursively read directory
      */
     async readDirectory(dirEntry) {

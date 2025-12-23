@@ -56,6 +56,11 @@ export class SampleLoader {
         type: 'text/xml'
       });
 
+      // Store the base URL for remote mesh loading (for MJCF files)
+      file.userData = {
+        baseUrl: sample.url.substring(0, sample.url.lastIndexOf('/') + 1)
+      };
+
       await this.fileHandler.handleFiles([file]);
 
     } catch (error) {
