@@ -21,6 +21,18 @@ export class MotionPresetLibrary {
 
   initializeDefaultPresets() {
     this.addPreset(new MotionPreset({
+      id: 'stand',
+      name: 'Stand',
+      description: 'Robot stands in neutral position',
+      url: './g1_stand.csv',
+      category: 'poses',
+      defaultDuration: 1.0,
+      icon: '🧍',
+      robotType: 'G1',
+      loopable: false
+    }));
+
+    this.addPreset(new MotionPreset({
       id: 'walk_forward',
       name: 'Walk Forward',
       description: 'Walk forward motion',
@@ -40,6 +52,54 @@ export class MotionPresetLibrary {
       category: 'locomotion',
       defaultDuration: 3.0,
       icon: '⬇️',
+      robotType: 'G1',
+      loopable: true
+    }));
+
+    this.addPreset(new MotionPreset({
+      id: 'sidestep_left',
+      name: 'Sidestep Left',
+      description: 'Robot sidesteps to the left',
+      url: './g1_sidestep_left.csv',
+      category: 'locomotion',
+      defaultDuration: 2.0,
+      icon: '⬅️',
+      robotType: 'G1',
+      loopable: true
+    }));
+
+    this.addPreset(new MotionPreset({
+      id: 'sidestep_right',
+      name: 'Sidestep Right',
+      description: 'Robot sidesteps to the right',
+      url: './g1_sidestep_right.csv',
+      category: 'locomotion',
+      defaultDuration: 2.0,
+      icon: '➡️',
+      robotType: 'G1',
+      loopable: true
+    }));
+
+    this.addPreset(new MotionPreset({
+      id: 'turn_left',
+      name: 'Turn Left',
+      description: 'Robot turns left',
+      url: './g1_turn_left.csv',
+      category: 'locomotion',
+      defaultDuration: 2.0,
+      icon: '↪️',
+      robotType: 'G1',
+      loopable: true
+    }));
+
+    this.addPreset(new MotionPreset({
+      id: 'turn_right',
+      name: 'Turn Right',
+      description: 'Robot turns right',
+      url: './g1_turn_right.csv',
+      category: 'locomotion',
+      defaultDuration: 2.0,
+      icon: '↩️',
       robotType: 'G1',
       loopable: true
     }));

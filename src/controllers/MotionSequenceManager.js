@@ -46,8 +46,13 @@ export class MotionSequenceManager {
   }
 
   async preloadDefaultMotions(robotType = 'G1') {
+    await this.preloadMotion('stand', './g1_stand.csv', robotType);
     await this.preloadMotion('walk_forward', './g1_walk_forward.csv', robotType);
     await this.preloadMotion('walk_backward', './g1_walk_backward.csv', robotType);
+    await this.preloadMotion('sidestep_left', './g1_sidestep_left.csv', robotType);
+    await this.preloadMotion('sidestep_right', './g1_sidestep_right.csv', robotType);
+    await this.preloadMotion('turn_left', './g1_turn_left.csv', robotType);
+    await this.preloadMotion('turn_right', './g1_turn_right.csv', robotType);
   }
 
   setSequence(commands) {
