@@ -1,9 +1,10 @@
 import { ROBOT_CONFIGS } from '../loaders/CSVMotionLoader.js';
 
 export class CSVMotionUI {
-  constructor(container, motionController) {
+  constructor(container, motionController, sequenceManager = null) {
     this.container = container;
     this.motionController = motionController;
+    this.sequenceManager = sequenceManager;
     this.elements = {};
     this.isDraggingTimeline = false;
 
@@ -77,6 +78,74 @@ export class CSVMotionUI {
           margin-bottom: 12px;
           display: none;
         "></div>
+      </div>
+
+      <div id="csv-sequence-controls" style="
+        padding: 12px;
+        background: rgba(100, 150, 255, 0.08);
+        border: 1px solid rgba(100, 150, 255, 0.2);
+        border-radius: 8px;
+        margin-bottom: 12px;
+      ">
+        <div style="
+          color: var(--text-secondary);
+          font-size: 11px;
+          font-weight: 600;
+          margin-bottom: 8px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        ">Motion Sequences</div>
+
+        <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+          <button id="csv-seq-forward-back" style="
+            flex: 1;
+            padding: 8px 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 600;
+            transition: all 0.2s;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+          ">Forward → Backward</button>
+
+          <button id="csv-seq-back-forward" style="
+            flex: 1;
+            padding: 8px 12px;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 600;
+            transition: all 0.2s;
+            box-shadow: 0 2px 8px rgba(245, 87, 108, 0.3);
+          ">Backward → Forward</button>
+        </div>
+
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <label style="
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-secondary);
+            font-size: 11px;
+            cursor: pointer;
+          ">
+            <input type="checkbox" id="csv-seq-loop" style="cursor: pointer;" />
+            Loop Sequence
+          </label>
+
+          <div id="csv-seq-status" style="
+            margin-left: auto;
+            color: var(--text-tertiary);
+            font-size: 10px;
+            font-weight: 500;
+          "></div>
+        </div>
       </div>
 
       <div id="csv-playback-controls" style="display: none; flex: 1; display: flex; flex-direction: column; gap: 12px;">
@@ -194,6 +263,11 @@ export class CSVMotionUI {
       loadBtn: panel.querySelector('#csv-load-btn'),
       robotType: panel.querySelector('#csv-robot-type'),
       motionInfo: panel.querySelector('#csv-motion-info'),
+      sequenceControls: panel.querySelector('#csv-sequence-controls'),
+      seqForwardBack: panel.querySelector('#csv-seq-forward-back'),
+      seqBackForward: panel.querySelector('#csv-seq-back-forward'),
+      seqLoopCheckbox: panel.querySelector('#csv-seq-loop'),
+      seqStatus: panel.querySelector('#csv-seq-status'),
       playbackControls: panel.querySelector('#csv-playback-controls'),
       playBtn: panel.querySelector('#csv-play-btn'),
       stopBtn: panel.querySelector('#csv-stop-btn'),
@@ -216,6 +290,29 @@ export class CSVMotionUI {
     this.elements.fileInput.addEventListener('change', (e) => {
       this.handleFileLoad(e.target.files[0]);
     });
+
+    if (this.sequenceManager) {
+      this.elements.seqForwardBack.addEventListener('click', () => {
+        const loop = this.elements.seqLoopCheckbox.checked;
+        this.sequenceManager.playSequence(['walk_forward', 'walk_backward'], loop);
+      });
+
+      this.elements.seqBackForward.addEventListener('click', () => {
+        const loop = this.elements.seqLoopCheckbox.checked;
+        this.sequenceManager.playSequence(['walk_backward', 'walk_forward'], loop);
+      });
+
+      this.sequenceManager.onMotionChange = (motionName, index, total) => {
+        this.updateSequenceStatus(motionName, index, total);
+      };
+
+      this.sequenceManager.onSequenceComplete = () => {
+        this.elements.seqStatus.textContent = 'Sequence complete';
+        setTimeout(() => {
+          this.elements.seqStatus.textContent = '';
+        }, 2000);
+      };
+    }
 
     this.elements.playBtn.addEventListener('click', () => {
       this.togglePlayPause();
@@ -333,6 +430,11 @@ export class CSVMotionUI {
 
   update() {
     this.motionController.update();
+  }
+
+  updateSequenceStatus(motionName, index, total) {
+    const displayName = motionName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    this.elements.seqStatus.textContent = `${displayName} (${index + 1}/${total})`;
   }
 
   dispose() {

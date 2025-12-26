@@ -18,6 +18,7 @@ import { MujocoSimulationManager } from './renderer/MujocoSimulationManager.js';
 import { MotionControlsUI } from './ui/MotionControlsUI.js';
 import { CSVMotionController } from './controllers/CSVMotionController.js';
 import { CSVMotionUI } from './ui/CSVMotionUI.js';
+import { MotionSequenceManager } from './controllers/MotionSequenceManager.js';
 import { i18n } from './utils/i18n.js';
 
 // Expose d3 globally for PanelManager
@@ -43,6 +44,7 @@ class App {
         this.motionControlsUI = null;
         this.csvMotionController = null;
         this.csvMotionUI = null;
+        this.sequenceManager = null;
         this.currentModel = null;
         this.currentMJCFFile = null;
         this.currentMJCFModel = null;
@@ -216,6 +218,20 @@ class App {
 
         } catch (error) {
             console.error('Initialization error:', error);
+        }
+    }
+
+    /**
+     * Preload CSV motions
+     */
+    async preloadCSVMotions() {
+        if (!this.sequenceManager) return;
+
+        try {
+            await this.sequenceManager.preloadDefaultMotions('G1');
+            console.log('CSV motions preloaded successfully');
+        } catch (error) {
+            console.warn('Failed to preload CSV motions:', error);
         }
     }
 
@@ -449,10 +465,16 @@ class App {
                 this.csvMotionController.isPlaying = false;
             }
 
+            // Initialize sequence manager if not exists
+            if (!this.sequenceManager) {
+                this.sequenceManager = new MotionSequenceManager(this.csvMotionController);
+                this.preloadCSVMotions();
+            }
+
             // Initialize CSV motion UI if not exists
             const csvMotionContainer = document.getElementById('csv-motion-container');
             if (csvMotionContainer && !this.csvMotionUI) {
-                this.csvMotionUI = new CSVMotionUI(csvMotionContainer, this.csvMotionController);
+                this.csvMotionUI = new CSVMotionUI(csvMotionContainer, this.csvMotionController, this.sequenceManager);
             }
 
             // Draw model graph
