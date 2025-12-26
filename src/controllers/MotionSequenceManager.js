@@ -1,4 +1,5 @@
 import { CSVMotionLoader } from '../loaders/CSVMotionLoader.js';
+import { MotionCommand } from '../models/MotionCommand.js';
 
 export class MotionSequenceManager {
   constructor(csvMotionController) {
@@ -11,6 +12,11 @@ export class MotionSequenceManager {
 
     this.onSequenceComplete = null;
     this.onMotionChange = null;
+    this.onCommandUpdate = null;
+
+    this.commandStartTime = 0;
+    this.currentCommand = null;
+    this.commandElapsedTime = 0;
 
     this.setupControllerCallbacks();
   }
@@ -44,14 +50,56 @@ export class MotionSequenceManager {
     await this.preloadMotion('walk_backward', './g1_walk_backward.csv', robotType);
   }
 
-  setSequence(motionNames) {
-    this.sequence = motionNames;
+  setSequence(commands) {
+    this.sequence = commands.map(cmd =>
+      cmd instanceof MotionCommand ? cmd : new MotionCommand(cmd)
+    );
     this.currentIndex = 0;
   }
 
-  playSequence(motionNames = null, loop = false) {
-    if (motionNames) {
-      this.setSequence(motionNames);
+  addCommand(command) {
+    const cmd = command instanceof MotionCommand ? command : new MotionCommand(command);
+    this.sequence.push(cmd);
+  }
+
+  removeCommand(index) {
+    if (index >= 0 && index < this.sequence.length) {
+      this.sequence.splice(index, 1);
+      if (this.currentIndex >= this.sequence.length) {
+        this.currentIndex = Math.max(0, this.sequence.length - 1);
+      }
+    }
+  }
+
+  moveCommand(fromIndex, toIndex) {
+    if (fromIndex >= 0 && fromIndex < this.sequence.length &&
+        toIndex >= 0 && toIndex < this.sequence.length) {
+      const [command] = this.sequence.splice(fromIndex, 1);
+      this.sequence.splice(toIndex, 0, command);
+    }
+  }
+
+  clearSequence() {
+    this.sequence = [];
+    this.currentIndex = 0;
+  }
+
+  getSequence() {
+    return this.sequence;
+  }
+
+  getTotalDuration() {
+    return this.sequence.reduce((total, cmd) => {
+      const motion = this.preloadedMotions.get(cmd.motionId);
+      const motionDuration = motion ? motion.duration : 0;
+      const cmdDuration = cmd.duration !== null ? cmd.duration : motionDuration;
+      return total + (cmdDuration * cmd.repeatCount) + cmd.transitionDelay;
+    }, 0);
+  }
+
+  playSequence(commands = null, loop = false) {
+    if (commands) {
+      this.setSequence(commands);
     }
 
     if (this.sequence.length === 0) {
@@ -59,53 +107,130 @@ export class MotionSequenceManager {
       return;
     }
 
+    const validation = this.validateSequence();
+    if (!validation.valid) {
+      console.error('Invalid sequence:', validation.errors);
+      return;
+    }
+
     this.loopSequence = loop;
     this.isPlayingSequence = true;
     this.currentIndex = 0;
-    this.playCurrentMotion();
+    this.playCurrentCommand();
   }
 
-  playCurrentMotion() {
+  validateSequence() {
+    const errors = [];
+    for (let i = 0; i < this.sequence.length; i++) {
+      const cmd = this.sequence[i];
+      const validation = cmd.validate(this.preloadedMotions);
+      if (!validation.valid) {
+        errors.push(`Command ${i + 1}: ${validation.error}`);
+      }
+    }
+    return {
+      valid: errors.length === 0,
+      errors
+    };
+  }
+
+  playCurrentCommand() {
     if (this.currentIndex >= this.sequence.length) {
       this.stopSequence();
       return;
     }
 
-    const motionName = this.sequence[this.currentIndex];
-    const motionData = this.preloadedMotions.get(motionName);
+    this.currentCommand = this.sequence[this.currentIndex];
+    const motionData = this.preloadedMotions.get(this.currentCommand.motionId);
 
     if (!motionData) {
-      console.error(`Motion not found: ${motionName}`);
+      console.error(`Motion not found: ${this.currentCommand.motionId}`);
       this.stopSequence();
       return;
     }
 
-    console.log(`Playing motion ${this.currentIndex + 1}/${this.sequence.length}: ${motionName}`);
+    const motionDuration = motionData.duration;
+    const targetDuration = this.currentCommand.duration !== null ?
+      Math.min(this.currentCommand.duration, motionDuration) : motionDuration;
+
+    console.log(`Playing command ${this.currentIndex + 1}/${this.sequence.length}: ${this.currentCommand.motionId} (${targetDuration.toFixed(2)}s)`);
+
+    this.commandStartTime = performance.now();
+    this.commandElapsedTime = 0;
 
     this.controller.loadMotion(motionData);
     this.controller.setLoop(false);
     this.controller.play();
 
     if (this.onMotionChange) {
-      this.onMotionChange(motionName, this.currentIndex, this.sequence.length);
+      this.onMotionChange(
+        this.currentCommand.motionId,
+        this.currentIndex,
+        this.sequence.length,
+        this.currentCommand
+      );
+    }
+
+    this.scheduleCommandCheck(targetDuration);
+  }
+
+  scheduleCommandCheck(targetDuration) {
+    if (!this.isPlayingSequence) return;
+
+    const checkInterval = setInterval(() => {
+      if (!this.isPlayingSequence || !this.currentCommand) {
+        clearInterval(checkInterval);
+        return;
+      }
+
+      this.commandElapsedTime = (performance.now() - this.commandStartTime) / 1000;
+
+      if (this.onCommandUpdate) {
+        this.onCommandUpdate({
+          command: this.currentCommand,
+          elapsed: this.commandElapsedTime,
+          target: targetDuration,
+          progress: this.commandElapsedTime / targetDuration
+        });
+      }
+
+      if (this.commandElapsedTime >= targetDuration) {
+        clearInterval(checkInterval);
+        this.handleCommandComplete();
+      }
+    }, 50);
+  }
+
+  handleCommandComplete() {
+    if (!this.isPlayingSequence) return;
+
+    if (this.currentCommand && this.currentCommand.transitionDelay > 0) {
+      setTimeout(() => {
+        this.moveToNextCommand();
+      }, this.currentCommand.transitionDelay * 1000);
+    } else {
+      this.moveToNextCommand();
     }
   }
 
-  handleMotionComplete() {
-    if (!this.isPlayingSequence) return;
-
+  moveToNextCommand() {
     this.currentIndex++;
 
     if (this.currentIndex >= this.sequence.length) {
       if (this.loopSequence) {
         this.currentIndex = 0;
-        setTimeout(() => this.playCurrentMotion(), 100);
+        setTimeout(() => this.playCurrentCommand(), 100);
       } else {
         this.stopSequence();
       }
     } else {
-      setTimeout(() => this.playCurrentMotion(), 100);
+      setTimeout(() => this.playCurrentCommand(), 100);
     }
+  }
+
+  handleMotionComplete() {
+    if (!this.isPlayingSequence) return;
+    this.handleCommandComplete();
   }
 
   stopSequence() {
@@ -140,9 +265,22 @@ export class MotionSequenceManager {
   getCurrentSequenceInfo() {
     return {
       currentIndex: this.currentIndex,
-      totalMotions: this.sequence.length,
-      currentMotion: this.sequence[this.currentIndex] || null,
-      isPlaying: this.isPlayingSequence
+      totalCommands: this.sequence.length,
+      currentCommand: this.sequence[this.currentIndex] || null,
+      isPlaying: this.isPlayingSequence,
+      elapsedTime: this.commandElapsedTime
     };
+  }
+
+  exportSequence() {
+    return {
+      commands: this.sequence.map(cmd => cmd.toJSON()),
+      totalDuration: this.getTotalDuration()
+    };
+  }
+
+  importSequence(data) {
+    this.sequence = data.commands.map(cmd => MotionCommand.fromJSON(cmd));
+    this.currentIndex = 0;
   }
 }
