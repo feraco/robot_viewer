@@ -24,50 +24,43 @@ export class CSVMotionController {
   }
 
   loadMotion(motionData, preserveState = true) {
-    let motionStartPos = null;
-    let motionStartRot = null;
-
-    if (motionData.frames[0]) {
-      motionStartPos = new THREE.Vector3(
-        motionData.frames[0].root.position.x,
-        motionData.frames[0].root.position.y,
-        motionData.frames[0].root.position.z
-      );
-      motionStartRot = new THREE.Quaternion(
-        motionData.frames[0].root.quaternion.x,
-        motionData.frames[0].root.quaternion.y,
-        motionData.frames[0].root.quaternion.z,
-        motionData.frames[0].root.quaternion.w
-      );
-    }
-
-    if (this.motionData && preserveState) {
+    if (this.motionData && preserveState && motionData.frames[0]) {
       const lastFrameIndex = this.motionData.frameCount - 1;
       const lastFrame = this.motionData.frames[lastFrameIndex];
-      if (lastFrame && motionStartPos && motionStartRot) {
-        const lastWorldPos = new THREE.Vector3(
+
+      if (lastFrame) {
+        const lastLocalPos = new THREE.Vector3(
           lastFrame.root.position.x,
           lastFrame.root.position.y,
           lastFrame.root.position.z
         );
-        const lastWorldRot = new THREE.Quaternion(
+        const lastLocalRot = new THREE.Quaternion(
           lastFrame.root.quaternion.x,
           lastFrame.root.quaternion.y,
           lastFrame.root.quaternion.z,
           lastFrame.root.quaternion.w
         );
 
-        const transformedLastPos = lastWorldPos.clone().applyQuaternion(this.accumulatedRotation).add(this.accumulatedPosition);
-        const transformedLastRot = this.accumulatedRotation.clone().multiply(lastWorldRot);
+        const finalWorldPos = lastLocalPos.clone().applyQuaternion(this.accumulatedRotation).add(this.accumulatedPosition);
+        const finalWorldRot = this.accumulatedRotation.clone().multiply(lastLocalRot);
 
-        const invMotionStartRot = motionStartRot.clone().invert();
-        const newAccumulatedRot = transformedLastRot.clone().multiply(invMotionStartRot);
+        const newMotionStartPos = new THREE.Vector3(
+          motionData.frames[0].root.position.x,
+          motionData.frames[0].root.position.y,
+          motionData.frames[0].root.position.z
+        );
+        const newMotionStartRot = new THREE.Quaternion(
+          motionData.frames[0].root.quaternion.x,
+          motionData.frames[0].root.quaternion.y,
+          motionData.frames[0].root.quaternion.z,
+          motionData.frames[0].root.quaternion.w
+        );
 
-        const rotatedMotionStart = motionStartPos.clone().applyQuaternion(newAccumulatedRot);
-        const newAccumulatedPos = new THREE.Vector3().subVectors(transformedLastPos, rotatedMotionStart);
+        const invNewMotionStartRot = newMotionStartRot.clone().invert();
+        this.accumulatedRotation = finalWorldRot.clone().multiply(invNewMotionStartRot);
 
-        this.accumulatedPosition.copy(newAccumulatedPos);
-        this.accumulatedRotation.copy(newAccumulatedRot);
+        const rotatedNewStart = newMotionStartPos.clone().applyQuaternion(this.accumulatedRotation);
+        this.accumulatedPosition = finalWorldPos.clone().sub(rotatedNewStart);
       }
     }
 
