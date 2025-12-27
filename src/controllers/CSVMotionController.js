@@ -62,13 +62,19 @@ export class CSVMotionController {
         const rotatedNewStart = newMotionStartPos.clone().applyQuaternion(this.accumulatedRotation);
         this.accumulatedPosition = finalWorldPos.clone().sub(rotatedNewStart);
 
+        const constantHeight = lastLocalPos.z;
+        for (let i = 0; i < motionData.frames.length; i++) {
+          motionData.frames[i].root.position.z = constantHeight;
+        }
+
         console.log('Motion chaining:', {
           lastLocal: lastLocalPos.toArray(),
           finalWorld: finalWorldPos.toArray(),
           newStart: newMotionStartPos.toArray(),
           rotatedNewStart: rotatedNewStart.toArray(),
           accPos: this.accumulatedPosition.toArray(),
-          accRot: [this.accumulatedRotation.x, this.accumulatedRotation.y, this.accumulatedRotation.z, this.accumulatedRotation.w]
+          accRot: [this.accumulatedRotation.x, this.accumulatedRotation.y, this.accumulatedRotation.z, this.accumulatedRotation.w],
+          constantHeight: constantHeight
         });
       }
     }
