@@ -24,15 +24,50 @@ export class CSVMotionController {
   }
 
   loadMotion(motionData, preserveState = true) {
+    let motionStartPos = null;
+    let motionStartRot = null;
+
+    if (motionData.frames[0]) {
+      motionStartPos = new THREE.Vector3(
+        motionData.frames[0].root.position.x,
+        motionData.frames[0].root.position.y,
+        motionData.frames[0].root.position.z
+      );
+      motionStartRot = new THREE.Quaternion(
+        motionData.frames[0].root.quaternion.x,
+        motionData.frames[0].root.quaternion.y,
+        motionData.frames[0].root.quaternion.z,
+        motionData.frames[0].root.quaternion.w
+      );
+    }
+
     if (this.motionData && preserveState) {
       const lastFrameIndex = this.motionData.frameCount - 1;
       const lastFrame = this.motionData.frames[lastFrameIndex];
-      if (lastFrame) {
-        this.lastMotionFinalState = {
-          position: new THREE.Vector3(lastFrame.root.position.x, lastFrame.root.position.y, lastFrame.root.position.z),
-          rotation: new THREE.Quaternion(lastFrame.root.quaternion.x, lastFrame.root.quaternion.y, lastFrame.root.quaternion.z, lastFrame.root.quaternion.w),
-          joints: { ...lastFrame.joints }
-        };
+      if (lastFrame && motionStartPos && motionStartRot) {
+        const lastWorldPos = new THREE.Vector3(
+          lastFrame.root.position.x,
+          lastFrame.root.position.y,
+          lastFrame.root.position.z
+        );
+        const lastWorldRot = new THREE.Quaternion(
+          lastFrame.root.quaternion.x,
+          lastFrame.root.quaternion.y,
+          lastFrame.root.quaternion.z,
+          lastFrame.root.quaternion.w
+        );
+
+        const transformedLastPos = lastWorldPos.clone().applyQuaternion(this.accumulatedRotation).add(this.accumulatedPosition);
+        const transformedLastRot = this.accumulatedRotation.clone().multiply(lastWorldRot);
+
+        const invMotionStartRot = motionStartRot.clone().invert();
+        const newAccumulatedRot = transformedLastRot.clone().multiply(invMotionStartRot);
+
+        const rotatedMotionStart = motionStartPos.clone().applyQuaternion(newAccumulatedRot);
+        const newAccumulatedPos = new THREE.Vector3().subVectors(transformedLastPos, rotatedMotionStart);
+
+        this.accumulatedPosition.copy(newAccumulatedPos);
+        this.accumulatedRotation.copy(newAccumulatedRot);
       }
     }
 
@@ -40,20 +75,6 @@ export class CSVMotionController {
     this.currentFrame = 0;
     this.isPlaying = false;
     this.lastUpdateTime = performance.now();
-
-    if (preserveState && this.lastMotionFinalState && motionData.frames[0]) {
-      const firstFrame = motionData.frames[0];
-      const motionStartPos = new THREE.Vector3(firstFrame.root.position.x, firstFrame.root.position.y, firstFrame.root.position.z);
-      const motionStartRot = new THREE.Quaternion(firstFrame.root.quaternion.x, firstFrame.root.quaternion.y, firstFrame.root.quaternion.z, firstFrame.root.quaternion.w);
-
-      const positionOffset = new THREE.Vector3().subVectors(this.lastMotionFinalState.position, motionStartPos);
-
-      const invMotionStartRot = motionStartRot.clone().invert();
-      const rotationOffset = this.lastMotionFinalState.rotation.clone().multiply(invMotionStartRot);
-
-      this.accumulatedPosition.copy(positionOffset);
-      this.accumulatedRotation.copy(rotationOffset);
-    }
 
     const availableJoints = this.robotModel?.joints ? Array.from(this.robotModel.joints.keys()) : [];
     const motionJoints = motionData.frames[0] ? Object.keys(motionData.frames[0].joints) : [];
@@ -66,8 +87,7 @@ export class CSVMotionController {
       fps: motionData.fps,
       availableJoints: availableJoints,
       motionJoints: motionJoints,
-      missingJoints: missingJoints,
-      preserveState: preserveState
+      missingJoints: missingJoints
     });
 
     if (missingJoints.length > 0) {
