@@ -21,6 +21,7 @@ export class CSVMotionController {
     this.accumulatedPosition = new THREE.Vector3(0, 0, 0);
     this.accumulatedRotation = new THREE.Quaternion(0, 0, 0, 1);
     this.lastMotionFinalState = null;
+    this.heightLock = null;
   }
 
   loadMotion(motionData, preserveState = true) {
@@ -62,10 +63,7 @@ export class CSVMotionController {
         const rotatedNewStart = newMotionStartPos.clone().applyQuaternion(this.accumulatedRotation);
         this.accumulatedPosition = finalWorldPos.clone().sub(rotatedNewStart);
 
-        const constantHeight = lastLocalPos.z;
-        for (let i = 0; i < motionData.frames.length; i++) {
-          motionData.frames[i].root.position.z = constantHeight;
-        }
+        this.heightLock = finalWorldPos.z;
 
         console.log('Motion chaining:', {
           lastLocal: lastLocalPos.toArray(),
@@ -74,9 +72,11 @@ export class CSVMotionController {
           rotatedNewStart: rotatedNewStart.toArray(),
           accPos: this.accumulatedPosition.toArray(),
           accRot: [this.accumulatedRotation.x, this.accumulatedRotation.y, this.accumulatedRotation.z, this.accumulatedRotation.w],
-          constantHeight: constantHeight
+          heightLock: this.heightLock
         });
       }
+    } else {
+      this.heightLock = null;
     }
 
     this.motionData = motionData;
@@ -191,6 +191,10 @@ export class CSVMotionController {
       const finalPos = rotatedOffset.add(this.accumulatedPosition);
       const finalRot = this.accumulatedRotation.clone().multiply(frameRot);
 
+      if (this.heightLock !== null) {
+        finalPos.z = this.heightLock;
+      }
+
       rootLink.position.copy(finalPos);
       rootLink.quaternion.copy(finalRot);
     }
@@ -274,6 +278,7 @@ export class CSVMotionController {
     this.accumulatedPosition.set(0, 0, 0);
     this.accumulatedRotation.set(0, 0, 0, 1);
     this.lastMotionFinalState = null;
+    this.heightLock = null;
   }
 
   dispose() {
