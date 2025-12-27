@@ -292,7 +292,8 @@ export class CSVMotionUI {
         : this.elements.robotType.value;
 
       const motionData = await CSVMotionLoader.loadFromFile(file, robotType);
-      this.motionController.loadMotion(motionData);
+      this.motionController.resetAccumulatedTransforms();
+      this.motionController.loadMotion(motionData, false);
 
       this.elements.playbackControls.style.display = 'block';
       this.updateTimeDisplay();
