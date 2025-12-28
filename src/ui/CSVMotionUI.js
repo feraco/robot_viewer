@@ -108,7 +108,7 @@ export class CSVMotionUI {
           gap: 6px;
           margin-bottom: 10px;
         ">
-          <button class="quick-move-btn" data-motion="g1_walk_forward" style="
+          <button class="quick-move-btn" data-motion="walk_forward_05-11s_30fps copy" style="
             padding: 8px;
             background: rgba(76, 175, 80, 0.2);
             color: #4caf50;
