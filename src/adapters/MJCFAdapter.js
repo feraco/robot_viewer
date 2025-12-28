@@ -26,8 +26,12 @@ export class MJCFAdapter {
         const model = new UnifiedRobotModel();
         model.name = 'mujoco_model';
 
+        // Parse meshdir from compiler tag (default to empty if not specified)
+        const compilerEl = doc.querySelector('compiler');
+        const meshdir = compilerEl?.getAttribute('meshdir') || '';
+
         // Parse mesh definitions in asset tags (build mesh name to file path mapping)
-        const meshMap = this.parseAssets(doc);
+        const meshMap = this.parseAssets(doc, meshdir);
 
         // Parse material definitions in material tags
         const materialMap = this.parseMaterials(doc);
@@ -173,10 +177,11 @@ export class MJCFAdapter {
     /**
      * Parse mesh definitions in asset tags
      * @param {Document} doc - XML document
+     * @param {string} meshdir - Mesh directory from compiler tag (prepended to file paths)
      * @returns {Map<string, object>} Mapping from mesh names to mesh data
      * Mesh data can be: { type: 'file', path: string } or { type: 'vertex', vertices: Float32Array, scale: [x,y,z] }
      */
-    static parseAssets(doc) {
+    static parseAssets(doc, meshdir = '') {
         const meshMap = new Map();
         const asset = doc.querySelector('asset');
         if (!asset) {
@@ -226,9 +231,17 @@ export class MJCFAdapter {
                     name = fileName.split('.')[0]; // Remove extension
                 }
 
+                // Prepend meshdir if specified and file path is relative
+                let meshPath = file;
+                if (meshdir && !file.startsWith('/') && !file.match(/^[a-zA-Z]:/)) {
+                    // Ensure meshdir ends with /
+                    const normalizedMeshdir = meshdir.endsWith('/') ? meshdir : meshdir + '/';
+                    meshPath = normalizedMeshdir + file;
+                }
+
                 meshMap.set(name, {
                     type: 'file',
-                    path: file
+                    path: meshPath
                 });
             } else {
                 console.warn('MJCF mesh element missing file or vertex attribute, skipping');
