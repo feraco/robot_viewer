@@ -309,6 +309,11 @@ export class FileHandler {
     async loadFile(file) {
         this.currentModelFile = file;
 
+        // Extract baseUrl from file.userData if present (for remote MJCF loading)
+        if (file.userData?.baseUrl) {
+            this.fileMap.set('__baseUrl__', file.userData.baseUrl);
+        }
+
         try {
             const fileName = file.name.toLowerCase();
 
