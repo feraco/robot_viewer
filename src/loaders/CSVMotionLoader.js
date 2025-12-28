@@ -192,4 +192,10 @@ export class CSVMotionLoader {
       reader.readAsText(file);
     });
   }
+
+  static async loadFromText(csvText, filename = 'motion', robotType = null) {
+    const detectedType = robotType || this.detectRobotType(csvText);
+    const motionData = this.parseCSV(csvText, detectedType);
+    return motionData;
+  }
 }

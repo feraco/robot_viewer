@@ -88,6 +88,144 @@ export class CSVMotionUI {
         margin-bottom: 12px;
       "></div>
 
+      <div id="csv-quick-movement-controls" style="
+        padding: 12px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--glass-border);
+        border-radius: 8px;
+        margin-bottom: 12px;
+      ">
+        <div style="
+          color: var(--text-primary);
+          font-size: 12px;
+          font-weight: 500;
+          margin-bottom: 10px;
+        ">Quick Movement Controls</div>
+
+        <div style="
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 6px;
+          margin-bottom: 10px;
+        ">
+          <button class="quick-move-btn" data-motion="g1_walk_forward" style="
+            padding: 8px;
+            background: rgba(76, 175, 80, 0.2);
+            color: #4caf50;
+            border: 1px solid rgba(76, 175, 80, 0.3);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 500;
+            transition: all 0.2s;
+          ">↑ Forward</button>
+
+          <button class="quick-move-btn" data-motion="g1_walk_backward" style="
+            padding: 8px;
+            background: rgba(255, 152, 0, 0.2);
+            color: #ff9800;
+            border: 1px solid rgba(255, 152, 0, 0.3);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 500;
+            transition: all 0.2s;
+          ">↓ Back</button>
+
+          <button class="quick-move-btn" data-motion="g1_stand" style="
+            padding: 8px;
+            background: rgba(96, 125, 139, 0.2);
+            color: #607d8b;
+            border: 1px solid rgba(96, 125, 139, 0.3);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 500;
+            transition: all 0.2s;
+          ">Stand</button>
+
+          <button class="quick-move-btn" data-motion="g1_turn_left" style="
+            padding: 8px;
+            background: rgba(33, 150, 243, 0.2);
+            color: #2196f3;
+            border: 1px solid rgba(33, 150, 243, 0.3);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 500;
+            transition: all 0.2s;
+          ">↺ Turn L</button>
+
+          <button class="quick-move-btn" data-motion="g1_turn_right" style="
+            padding: 8px;
+            background: rgba(33, 150, 243, 0.2);
+            color: #2196f3;
+            border: 1px solid rgba(33, 150, 243, 0.3);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 500;
+            transition: all 0.2s;
+          ">↻ Turn R</button>
+
+          <button class="quick-move-btn" data-motion="g1_sidestep_left" style="
+            padding: 8px;
+            background: rgba(156, 39, 176, 0.2);
+            color: #9c27b0;
+            border: 1px solid rgba(156, 39, 176, 0.3);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 500;
+            transition: all 0.2s;
+          ">← Side L</button>
+
+          <button class="quick-move-btn" data-motion="g1_sidestep_right" style="
+            padding: 8px;
+            background: rgba(156, 39, 176, 0.2);
+            color: #9c27b0;
+            border: 1px solid rgba(156, 39, 176, 0.3);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 500;
+            transition: all 0.2s;
+          ">→ Side R</button>
+        </div>
+
+        <div style="
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        ">
+          <label style="
+            color: var(--text-secondary);
+            font-size: 11px;
+            font-weight: 500;
+          ">Repeat:</label>
+          <input
+            type="number"
+            id="quick-move-repeat"
+            min="1"
+            max="10"
+            value="1"
+            style="
+              width: 60px;
+              padding: 6px 8px;
+              background: rgba(255, 255, 255, 0.08);
+              color: var(--text-primary);
+              border: 1px solid var(--glass-border);
+              border-radius: 6px;
+              font-size: 11px;
+            "
+          />
+          <span style="
+            color: var(--text-tertiary);
+            font-size: 10px;
+          ">times</span>
+        </div>
+      </div>
+
       <div id="csv-playback-controls" style="display: none; flex: 1; display: flex; flex-direction: column; gap: 12px;">
         <div style="display: flex; gap: 8px; align-items: center;">
           <button id="csv-play-btn" style="
@@ -204,6 +342,8 @@ export class CSVMotionUI {
       robotType: panel.querySelector('#csv-robot-type'),
       motionInfo: panel.querySelector('#csv-motion-info'),
       sequenceBuilderContainer: panel.querySelector('#csv-sequence-builder-container'),
+      quickMoveButtons: panel.querySelectorAll('.quick-move-btn'),
+      quickMoveRepeat: panel.querySelector('#quick-move-repeat'),
       playbackControls: panel.querySelector('#csv-playback-controls'),
       playBtn: panel.querySelector('#csv-play-btn'),
       stopBtn: panel.querySelector('#csv-stop-btn'),
@@ -245,6 +385,14 @@ export class CSVMotionUI {
 
     this.elements.loopCheckbox.addEventListener('change', (e) => {
       this.motionController.setLoop(e.target.checked);
+    });
+
+    this.elements.quickMoveButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const motionFile = btn.dataset.motion;
+        const repeatCount = parseInt(this.elements.quickMoveRepeat.value) || 1;
+        this.executeQuickMovement(motionFile, repeatCount);
+      });
     });
 
     this.elements.speedSlider.addEventListener('input', (e) => {
@@ -300,6 +448,47 @@ export class CSVMotionUI {
     } catch (error) {
       console.error('Failed to load CSV motion:', error);
       alert(`Failed to load CSV: ${error.message}`);
+    }
+  }
+
+  async executeQuickMovement(motionFile, repeatCount) {
+    try {
+      const { CSVMotionLoader } = await import('../loaders/CSVMotionLoader.js');
+
+      const response = await fetch(`/${motionFile}.csv`);
+      if (!response.ok) {
+        throw new Error(`Failed to load motion file: ${motionFile}.csv`);
+      }
+
+      const csvText = await response.text();
+      const robotType = this.elements.robotType.value === 'auto'
+        ? null
+        : this.elements.robotType.value;
+
+      const motionData = await CSVMotionLoader.loadFromText(csvText, motionFile, robotType);
+
+      for (let i = 0; i < repeatCount; i++) {
+        const preserveState = i > 0 || this.motionController.motionData !== null;
+        this.motionController.loadMotion(motionData, preserveState);
+        this.motionController.setLoop(false);
+        this.motionController.play();
+
+        await new Promise(resolve => {
+          const checkComplete = () => {
+            if (!this.motionController.isPlaying) {
+              resolve();
+            } else {
+              requestAnimationFrame(checkComplete);
+            }
+          };
+          checkComplete();
+        });
+      }
+
+      console.log(`Completed ${repeatCount}x ${motionFile}`);
+    } catch (error) {
+      console.error('Failed to execute quick movement:', error);
+      alert(`Failed to execute movement: ${error.message}`);
     }
   }
 
