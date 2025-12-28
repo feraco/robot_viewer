@@ -91,7 +91,7 @@ export class SampleLoader {
       });
 
       if (this.csvMotionUI) {
-        await this.csvMotionUI.handleCSVFile(file);
+        await this.csvMotionUI.handleFileLoad(file);
       } else {
         console.warn('CSV Motion UI not initialized yet. Please load a model first.');
       }
