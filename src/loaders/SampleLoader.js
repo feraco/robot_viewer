@@ -62,7 +62,10 @@ export class SampleLoader {
         baseUrl: sample.url.substring(0, sample.url.lastIndexOf('/') + 1)
       };
 
-      await this.fileHandler.handleFiles([file]);
+      // Add file to fileMap before loading
+      this.fileHandler.fileMap.set(fileName, file);
+
+      await this.fileHandler.loadFile(file);
 
     } catch (error) {
       console.error('Failed to load sample model:', error);
