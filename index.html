@@ -265,6 +265,174 @@
             background-clip: padding-box;
         }
 
+        /* Joint Graph Panel */
+        #floating-joint-graph-panel {
+            top: calc(100vh - 400px);
+            right: 380px;
+            width: 600px;
+            height: 380px;
+            display: none;
+        }
+
+        #floating-joint-graph-panel .floating-panel-content {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding: 12px;
+            overflow: hidden;
+        }
+
+        .graph-controls {
+            display: flex;
+            gap: 12px;
+            flex-shrink: 0;
+        }
+
+        .control-group {
+            display: flex;
+            gap: 6px;
+        }
+
+        .graph-btn {
+            padding: 6px 12px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+
+        .graph-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .graph-btn.active {
+            background: var(--accent-secondary);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .joint-selector-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            min-width: 0;
+        }
+
+        .joint-search {
+            padding: 6px 10px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 12px;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .joint-search:focus {
+            border-color: var(--accent);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .joint-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            max-height: 60px;
+            overflow-y: auto;
+        }
+
+        .joint-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 8px;
+            background: rgba(255, 255, 255, 0.04);
+            border-radius: 4px;
+            font-size: 11px;
+            white-space: nowrap;
+        }
+
+        .joint-item input[type="checkbox"] {
+            margin: 0;
+            cursor: pointer;
+        }
+
+        .joint-item label {
+            cursor: pointer;
+            color: var(--text-secondary);
+            user-select: none;
+        }
+
+        .joint-color-box {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+            display: inline-block;
+        }
+
+        .graph-canvas-container {
+            flex: 1;
+            position: relative;
+            min-height: 0;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        #joint-graph-svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        #joint-graph-svg .x-axis,
+        #joint-graph-svg .y-axis {
+            color: var(--text-secondary);
+        }
+
+        #joint-graph-svg .x-axis line,
+        #joint-graph-svg .y-axis line,
+        #joint-graph-svg .x-axis path,
+        #joint-graph-svg .y-axis path {
+            stroke: var(--glass-border);
+        }
+
+        #joint-graph-svg .x-axis text,
+        #joint-graph-svg .y-axis text,
+        #joint-graph-svg .x-label,
+        #joint-graph-svg .y-label {
+            fill: var(--text-secondary);
+            font-size: 11px;
+        }
+
+        [data-theme="light"] .graph-canvas-container {
+            background: rgba(0, 0, 0, 0.04);
+        }
+
+        [data-theme="light"] .graph-btn {
+            background: rgba(0, 0, 0, 0.04);
+        }
+
+        [data-theme="light"] .graph-btn:hover {
+            background: rgba(0, 0, 0, 0.08);
+        }
+
+        [data-theme="light"] .joint-search {
+            background: rgba(0, 0, 0, 0.04);
+        }
+
+        [data-theme="light"] .joint-search:focus {
+            background: rgba(0, 0, 0, 0.06);
+        }
+
+        [data-theme="light"] .joint-item {
+            background: rgba(0, 0, 0, 0.04);
+        }
+
         @keyframes slideIn {
             from {
                 opacity: 0;
@@ -2977,6 +3145,9 @@
                     <button class="tool-button" id="toggle-model-tree">
                         <span class="tool-button-text" data-i18n="structure"></span>
                     </button>
+                    <button class="tool-button" id="toggle-joint-graph">
+                        <span class="tool-button-text">Graph</span>
+                    </button>
                     <button class="tool-button" id="open-editor-btn">
                         <span class="tool-button-text" data-i18n="edit"></span>
                     </button>
@@ -3070,6 +3241,16 @@
                         </svg>
                         <div id="graph-empty-state" class="empty-state" data-i18n="noModel"></div>
                     </div>
+                </div>
+            </div>
+
+            <div id="floating-joint-graph-panel" class="floating-panel" style="display: none;">
+                <div class="floating-panel-header">
+                    <span>Joint Graph</span>
+                    <button class="panel-maximize-btn" data-panel-id="floating-joint-graph-panel">⛶</button>
+                    <button class="panel-close-btn" data-panel="floating-joint-graph-panel">✕</button>
+                </div>
+                <div class="floating-panel-content" id="joint-graph-container">
                 </div>
             </div>
 

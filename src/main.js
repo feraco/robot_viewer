@@ -21,6 +21,7 @@ import { CSVMotionUI } from './ui/CSVMotionUI.js';
 import { MotionSequenceManager } from './controllers/MotionSequenceManager.js';
 import { KeyboardMotionController } from './controllers/KeyboardMotionController.js';
 import { KeyboardIndicatorUI } from './ui/KeyboardIndicatorUI.js';
+import { JointGraphUI } from './ui/JointGraphUI.js';
 import { i18n } from './utils/i18n.js';
 
 // Expose d3 globally for PanelManager
@@ -50,6 +51,7 @@ class App {
         this.keyboardMotionController = null;
         this.keyboardIndicatorUI = null;
         this.keyboardHelpOverlay = null;
+        this.jointGraphUI = null;
         this.currentModel = null;
         this.currentMJCFFile = null;
         this.currentMJCFModel = null;
@@ -214,6 +216,9 @@ class App {
 
             // Setup model tree panel
             this.setupModelTreePanel();
+
+            // Setup joint graph panel
+            this.setupJointGraphPanel();
 
             // Update editor button visibility
             this.updateEditorButtonVisibility();
@@ -503,6 +508,12 @@ class App {
                 this.csvMotionUI = new CSVMotionUI(csvMotionContainer, this.csvMotionController, this.sequenceManager);
             }
 
+            // Initialize joint graph UI if not exists
+            if (!this.jointGraphUI) {
+                this.jointGraphUI = new JointGraphUI(this.csvMotionController);
+                this.jointGraphUI.initialize();
+            }
+
             // Initialize keyboard motion controller for CSV motion (but don't enable it automatically)
             if (!this.keyboardMotionController) {
                 console.log('Initializing Keyboard Motion Controller for CSV motion...');
@@ -735,6 +746,27 @@ class App {
 
                     if (this.sceneManager) {
                         this.sceneManager.highlightManager.clearHighlight();
+                    }
+                }
+            });
+        }
+    }
+
+    setupJointGraphPanel() {
+        const toggleBtn = document.getElementById('toggle-joint-graph');
+        const floatingPanel = document.getElementById('floating-joint-graph-panel');
+
+        if (toggleBtn && floatingPanel) {
+            toggleBtn.addEventListener('click', () => {
+                const isVisible = floatingPanel.style.display === 'flex';
+                if (isVisible) {
+                    floatingPanel.style.display = 'none';
+                    toggleBtn.classList.remove('active');
+                } else {
+                    floatingPanel.style.display = 'flex';
+                    toggleBtn.classList.add('active');
+                    if (this.jointGraphUI) {
+                        this.jointGraphUI.show();
                     }
                 }
             });
