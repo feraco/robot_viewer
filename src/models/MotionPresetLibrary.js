@@ -36,7 +36,7 @@ export class MotionPresetLibrary {
       id: 'walk_forward',
       name: 'Walk Forward',
       description: 'Walk forward motion',
-      url: './g1_walk_forward.csv',
+      url: './walk_forward_05-11s_30fps copy.csv',
       category: 'locomotion',
       defaultDuration: 3.0,
       icon: '⬆️',
