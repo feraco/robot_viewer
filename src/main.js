@@ -21,7 +21,6 @@ import { CSVMotionUI } from './ui/CSVMotionUI.js';
 import { MotionSequenceManager } from './controllers/MotionSequenceManager.js';
 import { KeyboardMotionController } from './controllers/KeyboardMotionController.js';
 import { KeyboardIndicatorUI } from './ui/KeyboardIndicatorUI.js';
-import { KeyboardHelpOverlay } from './ui/KeyboardHelpOverlay.js';
 import { i18n } from './utils/i18n.js';
 
 // Expose d3 globally for PanelManager
@@ -312,22 +311,12 @@ class App {
                 }
             }
 
-            // Initialize keyboard UI elements when MJCF model is loaded
+            // Initialize keyboard UI elements when MJCF model is loaded (but don't show them yet)
             if (!this.keyboardIndicatorUI) {
                 this.keyboardIndicatorUI = new KeyboardIndicatorUI();
                 const indicator = this.keyboardIndicatorUI.createIndicator();
                 document.body.appendChild(indicator);
-            }
-
-            if (!this.keyboardHelpOverlay) {
-                this.keyboardHelpOverlay = new KeyboardHelpOverlay();
-                const helpOverlay = this.keyboardHelpOverlay.createOverlay();
-                document.body.appendChild(helpOverlay);
-            }
-
-            // Show keyboard indicator (but don't enable controller until simulation starts)
-            if (this.keyboardIndicatorUI) {
-                this.keyboardIndicatorUI.show();
+                this.keyboardIndicatorUI.hide();
             }
         } else {
             // Hide simulation control bar (non-MJCF files)
@@ -1013,6 +1002,27 @@ class App {
                     this.motionControlsUI = new MotionControlsUI(this.mujocoSimulationManager.motionController);
                     const panel = this.motionControlsUI.createPanel();
                     document.body.appendChild(panel);
+
+                    // Wire up keyboard toggle
+                    this.motionControlsUI.onKeyboardToggle((enabled) => {
+                        console.log('Keyboard control toggled:', enabled);
+                        if (enabled) {
+                            if (this.keyboardMotionController) {
+                                this.keyboardMotionController.enable();
+                                if (this.keyboardIndicatorUI) {
+                                    this.keyboardIndicatorUI.show();
+                                }
+                            }
+                        } else {
+                            if (this.keyboardMotionController) {
+                                this.keyboardMotionController.disable();
+                                if (this.keyboardIndicatorUI) {
+                                    this.keyboardIndicatorUI.hide();
+                                }
+                            }
+                        }
+                    });
+
                     console.log('Motion Controls UI added to document body');
                     this.motionControlsUI.show();
                 } else if (this.motionControlsUI) {
@@ -1020,7 +1030,7 @@ class App {
                     this.motionControlsUI.show();
                 }
 
-                // Initialize keyboard motion controller
+                // Initialize keyboard motion controller (but don't enable it automatically)
                 if (this.mujocoSimulationManager.motionController && !this.keyboardMotionController) {
                     console.log('Initializing Keyboard Motion Controller...');
                     this.keyboardMotionController = new KeyboardMotionController(this.mujocoSimulationManager.motionController);
@@ -1037,20 +1047,7 @@ class App {
                         }
                     });
 
-                    this.keyboardMotionController.on('toggleHelp', () => {
-                        if (this.keyboardHelpOverlay) {
-                            this.keyboardHelpOverlay.toggle();
-                        }
-                    });
-
-                    this.keyboardMotionController.enable();
-                    console.log('Keyboard controls enabled');
-                }
-
-                // Enable keyboard controller if it already exists
-                if (this.keyboardMotionController) {
-                    this.keyboardMotionController.enable();
-                    console.log('Keyboard controls enabled');
+                    console.log('Keyboard motion controller initialized (disabled by default)');
                 }
 
                 return true;
@@ -1076,20 +1073,14 @@ class App {
                     this.motionControlsUI.show();
                 } else {
                     this.motionControlsUI.hide();
-                }
-            }
-
-            // Enable/disable keyboard controls based on simulation state
-            if (this.keyboardMotionController) {
-                if (isSimulating) {
-                    this.keyboardMotionController.enable();
-                    if (this.keyboardIndicatorUI) {
-                        this.keyboardIndicatorUI.show();
-                    }
-                } else {
-                    this.keyboardMotionController.disable();
-                    if (this.keyboardIndicatorUI) {
-                        this.keyboardIndicatorUI.hide();
+                    // Disable keyboard controls when simulation stops
+                    if (this.keyboardMotionController) {
+                        this.keyboardMotionController.disable();
+                        if (this.keyboardIndicatorUI) {
+                            this.keyboardIndicatorUI.hide();
+                        }
+                        // Reset toggle state
+                        this.motionControlsUI.setKeyboardEnabled(false);
                     }
                 }
             }

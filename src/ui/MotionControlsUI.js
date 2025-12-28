@@ -12,6 +12,8 @@ export class MotionControlsUI {
     this.loopCheckbox = null;
     this.statusText = null;
     this.updateInterval = null;
+    this.keyboardToggle = null;
+    this.onKeyboardToggleCallback = null;
   }
 
   createPanel() {
@@ -202,6 +204,59 @@ export class MotionControlsUI {
     loopContainer.appendChild(this.loopCheckbox);
     loopContainer.appendChild(loopLabel);
 
+    // Keyboard controls toggle
+    const keyboardContainer = document.createElement('div');
+    keyboardContainer.style.cssText = `
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      padding: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 4px;
+    `;
+
+    this.keyboardToggle = document.createElement('input');
+    this.keyboardToggle.type = 'checkbox';
+    this.keyboardToggle.id = 'keyboard-control';
+    this.keyboardToggle.style.cssText = `
+      cursor: pointer;
+    `;
+    this.keyboardToggle.onchange = () => {
+      if (this.onKeyboardToggleCallback) {
+        this.onKeyboardToggleCallback(this.keyboardToggle.checked);
+      }
+    };
+
+    const keyboardLabel = document.createElement('label');
+    keyboardLabel.htmlFor = 'keyboard-control';
+    keyboardLabel.style.cssText = `
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.9);
+      cursor: pointer;
+      flex: 1;
+    `;
+
+    const keyboardLabelText = document.createElement('span');
+    keyboardLabelText.textContent = 'Keyboard Control (Arrow Keys)';
+    keyboardLabelText.style.cssText = `
+      font-weight: 600;
+    `;
+
+    const keyboardHint = document.createElement('div');
+    keyboardHint.style.cssText = `
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.5);
+      margin-top: 2px;
+    `;
+    keyboardHint.textContent = '↑↓←→ for quick movements';
+
+    keyboardLabel.appendChild(keyboardLabelText);
+    keyboardLabel.appendChild(keyboardHint);
+
+    keyboardContainer.appendChild(this.keyboardToggle);
+    keyboardContainer.appendChild(keyboardLabel);
+
     const progressContainer = document.createElement('div');
     progressContainer.style.cssText = `
       margin-bottom: 8px;
@@ -251,6 +306,7 @@ export class MotionControlsUI {
     panel.appendChild(controlsContainer);
     panel.appendChild(speedContainer);
     panel.appendChild(loopContainer);
+    panel.appendChild(keyboardContainer);
     panel.appendChild(progressContainer);
     panel.appendChild(this.statusText);
 
@@ -371,6 +427,16 @@ export class MotionControlsUI {
   toggle() {
     if (this.panel) {
       this.panel.style.display = this.panel.style.display === 'none' ? 'block' : 'none';
+    }
+  }
+
+  onKeyboardToggle(callback) {
+    this.onKeyboardToggleCallback = callback;
+  }
+
+  setKeyboardEnabled(enabled) {
+    if (this.keyboardToggle) {
+      this.keyboardToggle.checked = enabled;
     }
   }
 
