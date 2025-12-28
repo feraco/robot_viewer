@@ -19,6 +19,9 @@ import { MotionControlsUI } from './ui/MotionControlsUI.js';
 import { CSVMotionController } from './controllers/CSVMotionController.js';
 import { CSVMotionUI } from './ui/CSVMotionUI.js';
 import { MotionSequenceManager } from './controllers/MotionSequenceManager.js';
+import { KeyboardMotionController } from './controllers/KeyboardMotionController.js';
+import { KeyboardIndicatorUI } from './ui/KeyboardIndicatorUI.js';
+import { KeyboardHelpOverlay } from './ui/KeyboardHelpOverlay.js';
 import { i18n } from './utils/i18n.js';
 
 // Expose d3 globally for PanelManager
@@ -45,6 +48,9 @@ class App {
         this.csvMotionController = null;
         this.csvMotionUI = null;
         this.sequenceManager = null;
+        this.keyboardMotionController = null;
+        this.keyboardIndicatorUI = null;
+        this.keyboardHelpOverlay = null;
         this.currentModel = null;
         this.currentMJCFFile = null;
         this.currentMJCFModel = null;
@@ -257,6 +263,14 @@ class App {
         if (this.mujocoSimulationManager && this.mujocoSimulationManager.hasScene()) {
             // Always clear simulation when switching files (MJCF or non-MJCF)
             this.mujocoSimulationManager.clearScene();
+
+            // Disable keyboard controls when simulation is cleared
+            if (this.keyboardMotionController) {
+                this.keyboardMotionController.disable();
+            }
+            if (this.keyboardIndicatorUI) {
+                this.keyboardIndicatorUI.hide();
+            }
         }
 
         if (isMJCF && model.joints && model.joints.size > 0) {
@@ -983,6 +997,48 @@ class App {
                     this.motionControlsUI.show();
                 }
 
+                // Initialize keyboard controls
+                if (this.mujocoSimulationManager.motionController && !this.keyboardMotionController) {
+                    console.log('Initializing Keyboard Motion Controller...');
+                    this.keyboardMotionController = new KeyboardMotionController(this.mujocoSimulationManager.motionController);
+
+                    this.keyboardIndicatorUI = new KeyboardIndicatorUI();
+                    const indicator = this.keyboardIndicatorUI.createIndicator();
+                    document.body.appendChild(indicator);
+
+                    this.keyboardHelpOverlay = new KeyboardHelpOverlay();
+                    const helpOverlay = this.keyboardHelpOverlay.createOverlay();
+                    document.body.appendChild(helpOverlay);
+
+                    this.keyboardMotionController.on('keyStateChange', (activeKeys) => {
+                        if (this.keyboardIndicatorUI) {
+                            this.keyboardIndicatorUI.updateKeyStates(activeKeys);
+                        }
+                    });
+
+                    this.keyboardMotionController.on('speedChange', (speed) => {
+                        if (this.keyboardIndicatorUI) {
+                            this.keyboardIndicatorUI.updateSpeed(speed);
+                        }
+                    });
+
+                    this.keyboardMotionController.on('toggleHelp', () => {
+                        if (this.keyboardHelpOverlay) {
+                            this.keyboardHelpOverlay.toggle();
+                        }
+                    });
+
+                    this.keyboardMotionController.enable();
+                    this.keyboardIndicatorUI.show();
+                    console.log('Keyboard controls enabled');
+                } else if (this.keyboardMotionController) {
+                    this.keyboardMotionController.enable();
+                    if (this.keyboardIndicatorUI) {
+                        this.keyboardIndicatorUI.show();
+                    }
+                    console.log('Keyboard controls re-enabled');
+                }
+
                 return true;
             } catch (error) {
                 console.error('MuJoCo scene loading failed:', error);
@@ -1006,6 +1062,21 @@ class App {
                     this.motionControlsUI.show();
                 } else {
                     this.motionControlsUI.hide();
+                }
+            }
+
+            // Enable/disable keyboard controls based on simulation state
+            if (this.keyboardMotionController) {
+                if (isSimulating) {
+                    this.keyboardMotionController.enable();
+                    if (this.keyboardIndicatorUI) {
+                        this.keyboardIndicatorUI.show();
+                    }
+                } else {
+                    this.keyboardMotionController.disable();
+                    if (this.keyboardIndicatorUI) {
+                        this.keyboardIndicatorUI.hide();
+                    }
                 }
             }
 

@@ -203,6 +203,14 @@ export class MotionControllerManager {
       params: { speed: 1.5, direction: 0 }
     });
 
+    this.registerPreset('walk_backward', {
+      name: 'Walk Backward',
+      type: 'procedural',
+      duration: Infinity,
+      generator: (time, params) => this.walkingGait.generateWalkingMotion(time, params),
+      params: { speed: 1.0, direction: 180 }
+    });
+
     this.registerPreset('sidestep_left', {
       name: 'Sidestep Left',
       type: 'procedural',

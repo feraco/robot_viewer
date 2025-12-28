@@ -10,6 +10,7 @@ export class WalkingGaitGenerator {
   generateWalkingMotion(currentTime, params = {}) {
     const speed = params.speed || 1.0;
     const direction = params.direction || 0;
+    const isBackward = direction === 180;
 
     const cycleTime = this.cycleTime / speed;
     const phase = (currentTime % cycleTime) / cycleTime;
@@ -19,8 +20,8 @@ export class WalkingGaitGenerator {
 
     const positions = {};
 
-    const leftLeg = this.computeLegPositions(leftLegPhase, params);
-    const rightLeg = this.computeLegPositions(rightLegPhase, params);
+    const leftLeg = this.computeLegPositions(leftLegPhase, { ...params, isBackward });
+    const rightLeg = this.computeLegPositions(rightLegPhase, { ...params, isBackward });
 
     positions['left_hip_pitch_joint'] = leftLeg.hipPitch;
     positions['left_hip_roll_joint'] = leftLeg.hipRoll;
@@ -55,13 +56,15 @@ export class WalkingGaitGenerator {
   computeLegPositions(phase, params = {}) {
     const stepLength = params.stepLength || this.stepLength;
     const stepHeight = params.stepHeight || this.stepHeight;
+    const isBackward = params.isBackward || false;
+    const directionMultiplier = isBackward ? -1 : 1;
 
     let hipPitch, knee, anklePitch;
 
     if (phase < 0.5) {
       const swingPhase = phase * 2.0;
       const heightCurve = Math.sin(swingPhase * Math.PI);
-      const forwardPosition = (swingPhase - 0.5) * stepLength;
+      const forwardPosition = (swingPhase - 0.5) * stepLength * directionMultiplier;
 
       const legLength = 0.8;
       const footHeight = stepHeight * heightCurve;
@@ -75,7 +78,7 @@ export class WalkingGaitGenerator {
       anklePitch = -hipPitch - knee * 0.5;
     } else {
       const stancePhase = (phase - 0.5) * 2.0;
-      const forwardPosition = (0.5 - stancePhase) * stepLength;
+      const forwardPosition = (0.5 - stancePhase) * stepLength * directionMultiplier;
 
       hipPitch = -forwardPosition * 0.8;
       knee = 0.1;
