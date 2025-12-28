@@ -18,7 +18,6 @@ import { MujocoSimulationManager } from './renderer/MujocoSimulationManager.js';
 import { MotionControlsUI } from './ui/MotionControlsUI.js';
 import { CSVMotionController } from './controllers/CSVMotionController.js';
 import { CSVMotionUI } from './ui/CSVMotionUI.js';
-import { CSVPhysicsMotionUI } from './ui/CSVPhysicsMotionUI.js';
 import { MotionSequenceManager } from './controllers/MotionSequenceManager.js';
 import { i18n } from './utils/i18n.js';
 
@@ -45,7 +44,6 @@ class App {
         this.motionControlsUI = null;
         this.csvMotionController = null;
         this.csvMotionUI = null;
-        this.csvPhysicsMotionUI = null;
         this.sequenceManager = null;
         this.currentModel = null;
         this.currentMJCFFile = null;
@@ -985,19 +983,6 @@ class App {
                     this.motionControlsUI.show();
                 }
 
-                // Initialize CSV physics motion UI
-                if (this.mujocoSimulationManager.csvMotionPlayer && !this.csvPhysicsMotionUI) {
-                    console.log('Initializing CSV Physics Motion UI...');
-                    this.csvPhysicsMotionUI = new CSVPhysicsMotionUI(this.mujocoSimulationManager);
-                    const panel = this.csvPhysicsMotionUI.createPanel();
-                    document.body.appendChild(panel);
-                    console.log('CSV Physics Motion UI added to document body');
-                    this.csvPhysicsMotionUI.show();
-                } else if (this.csvPhysicsMotionUI) {
-                    console.log('CSV Physics Motion UI already exists, showing it');
-                    this.csvPhysicsMotionUI.show();
-                }
-
                 return true;
             } catch (error) {
                 console.error('MuJoCo scene loading failed:', error);
@@ -1021,15 +1006,6 @@ class App {
                     this.motionControlsUI.show();
                 } else {
                     this.motionControlsUI.hide();
-                }
-            }
-
-            // Show/hide CSV physics motion UI based on simulation state
-            if (this.csvPhysicsMotionUI) {
-                if (isSimulating) {
-                    this.csvPhysicsMotionUI.show();
-                } else {
-                    this.csvPhysicsMotionUI.hide();
                 }
             }
 

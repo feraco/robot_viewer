@@ -10,7 +10,6 @@ import { CoordinateAxesManager } from './CoordinateAxesManager.js';
 import { InertialVisualization } from './InertialVisualization.js';
 import { VisualizationManager } from './VisualizationManager.js';
 import { MotionControllerManager } from './MotionControllerManager.js';
-import { CSVPhysicsMotionPlayer } from './CSVPhysicsMotionPlayer.js';
 
 export class MujocoSimulationManager {
     constructor(sceneManager) {
@@ -27,7 +26,6 @@ export class MujocoSimulationManager {
         this.dragStateManager = null;
         this.originalModel = null;  // Save original UnifiedRobotModel
         this.motionController = null;  // Motion control manager
-        this.csvMotionPlayer = null;  // CSV motion player for physics
 
         // Simulation parameters
         this.params = {
@@ -172,11 +170,6 @@ export class MujocoSimulationManager {
             // Create motion controller
             if (!this.motionController) {
                 this.motionController = new MotionControllerManager(this);
-            }
-
-            // Create CSV motion player
-            if (!this.csvMotionPlayer) {
-                this.csvMotionPlayer = new CSVPhysicsMotionPlayer(this);
             }
 
             return null;
@@ -1155,15 +1148,6 @@ export class MujocoSimulationManager {
                 this.motionController.update(deltaTime);
             }
         }
-
-        // Update CSV motion player (applies control during simulation)
-        if (this.csvMotionPlayer) {
-            const deltaTime = this.lastUpdateTime > 0 ? (timeMS - this.lastUpdateTime) / 1000.0 : 0;
-            if (deltaTime > 0 && deltaTime < 1.0) {
-                this.csvMotionPlayer.update(deltaTime);
-            }
-        }
-
         this.lastUpdateTime = timeMS;
 
         if (!this.params.paused) {
@@ -1425,12 +1409,6 @@ export class MujocoSimulationManager {
                 this.dragStateManager.arrow.parent.remove(this.dragStateManager.arrow);
             }
             this.dragStateManager = null;
-        }
-
-        // Clear CSV motion player
-        if (this.csvMotionPlayer) {
-            this.csvMotionPlayer.dispose();
-            this.csvMotionPlayer = null;
         }
 
         this.originalModel = null;
