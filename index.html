@@ -267,11 +267,19 @@
 
         /* Joint Graph Panel */
         #floating-joint-graph-panel {
-            top: calc(100vh - 400px);
-            right: 380px;
-            width: 600px;
-            height: 380px;
+            top: 80px;
+            left: calc(100vw - 500px - 20px);
+            width: 500px;
+            height: 340px;
             display: none;
+            transition: all 0.4s var(--spring);
+        }
+
+        #floating-joint-graph-panel.maximized {
+            top: 80px !important;
+            left: 20px !important;
+            width: calc(100vw - 40px) !important;
+            height: calc(100vh - 100px) !important;
         }
 
         #floating-joint-graph-panel .floating-panel-content {
