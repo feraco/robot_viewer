@@ -501,6 +501,26 @@ class App {
             const csvMotionContainer = document.getElementById('csv-motion-container');
             if (csvMotionContainer && !this.csvMotionUI) {
                 this.csvMotionUI = new CSVMotionUI(csvMotionContainer, this.csvMotionController, this.sequenceManager);
+
+                // Wire up keyboard toggle
+                this.csvMotionUI.onKeyboardToggle((enabled) => {
+                    console.log('Keyboard control toggled:', enabled);
+                    if (enabled) {
+                        if (this.keyboardMotionController) {
+                            this.keyboardMotionController.enable();
+                            if (this.keyboardIndicatorUI) {
+                                this.keyboardIndicatorUI.show();
+                            }
+                        }
+                    } else {
+                        if (this.keyboardMotionController) {
+                            this.keyboardMotionController.disable();
+                            if (this.keyboardIndicatorUI) {
+                                this.keyboardIndicatorUI.hide();
+                            }
+                        }
+                    }
+                });
             }
 
             // Draw model graph
@@ -996,40 +1016,6 @@ class App {
                 // Start simulation immediately
                 this.mujocoSimulationManager.startSimulation();
 
-                // Initialize motion controls UI
-                if (this.mujocoSimulationManager.motionController && !this.motionControlsUI) {
-                    console.log('Initializing Motion Controls UI...');
-                    this.motionControlsUI = new MotionControlsUI(this.mujocoSimulationManager.motionController);
-                    const panel = this.motionControlsUI.createPanel();
-                    document.body.appendChild(panel);
-
-                    // Wire up keyboard toggle
-                    this.motionControlsUI.onKeyboardToggle((enabled) => {
-                        console.log('Keyboard control toggled:', enabled);
-                        if (enabled) {
-                            if (this.keyboardMotionController) {
-                                this.keyboardMotionController.enable();
-                                if (this.keyboardIndicatorUI) {
-                                    this.keyboardIndicatorUI.show();
-                                }
-                            }
-                        } else {
-                            if (this.keyboardMotionController) {
-                                this.keyboardMotionController.disable();
-                                if (this.keyboardIndicatorUI) {
-                                    this.keyboardIndicatorUI.hide();
-                                }
-                            }
-                        }
-                    });
-
-                    console.log('Motion Controls UI added to document body');
-                    this.motionControlsUI.show();
-                } else if (this.motionControlsUI) {
-                    console.log('Motion Controls UI already exists, showing it');
-                    this.motionControlsUI.show();
-                }
-
                 // Initialize keyboard motion controller (but don't enable it automatically)
                 if (this.mujocoSimulationManager.motionController && !this.keyboardMotionController) {
                     console.log('Initializing Keyboard Motion Controller...');
@@ -1067,20 +1053,16 @@ class App {
                 this.currentModel.threeObject.visible = !isSimulating;
             }
 
-            // Show/hide motion controls UI based on simulation state
-            if (this.motionControlsUI) {
-                if (isSimulating) {
-                    this.motionControlsUI.show();
-                } else {
-                    this.motionControlsUI.hide();
-                    // Disable keyboard controls when simulation stops
-                    if (this.keyboardMotionController) {
-                        this.keyboardMotionController.disable();
-                        if (this.keyboardIndicatorUI) {
-                            this.keyboardIndicatorUI.hide();
-                        }
-                        // Reset toggle state
-                        this.motionControlsUI.setKeyboardEnabled(false);
+            // Disable keyboard controls when simulation stops
+            if (!isSimulating) {
+                if (this.keyboardMotionController) {
+                    this.keyboardMotionController.disable();
+                    if (this.keyboardIndicatorUI) {
+                        this.keyboardIndicatorUI.hide();
+                    }
+                    // Reset toggle state in CSV Motion UI
+                    if (this.csvMotionUI) {
+                        this.csvMotionUI.setKeyboardEnabled(false);
                     }
                 }
             }

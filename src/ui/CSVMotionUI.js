@@ -11,6 +11,7 @@ export class CSVMotionUI {
     this.isDraggingTimeline = false;
     this.presetLibrary = new MotionPresetLibrary();
     this.sequenceBuilderUI = null;
+    this.onKeyboardToggleCallback = null;
 
     this.init();
     this.setupEventListeners();
@@ -224,6 +225,31 @@ export class CSVMotionUI {
             font-size: 10px;
           ">times</span>
         </div>
+
+        <div style="
+          margin-top: 10px;
+          padding-top: 10px;
+          border-top: 1px solid var(--glass-border);
+        ">
+          <label style="
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            color: var(--text-primary);
+            font-size: 11px;
+            font-weight: 500;
+          ">
+            <input type="checkbox" id="keyboard-control-toggle" style="cursor: pointer;" />
+            <span>Keyboard Control (Arrow Keys)</span>
+          </label>
+          <div style="
+            color: var(--text-tertiary);
+            font-size: 10px;
+            margin-top: 4px;
+            margin-left: 24px;
+          ">↑↓←→ for quick movements</div>
+        </div>
       </div>
 
       <div id="csv-playback-controls" style="display: none; flex: 1; display: flex; flex-direction: column; gap: 12px;">
@@ -344,6 +370,7 @@ export class CSVMotionUI {
       sequenceBuilderContainer: panel.querySelector('#csv-sequence-builder-container'),
       quickMoveButtons: panel.querySelectorAll('.quick-move-btn'),
       quickMoveRepeat: panel.querySelector('#quick-move-repeat'),
+      keyboardToggle: panel.querySelector('#keyboard-control-toggle'),
       playbackControls: panel.querySelector('#csv-playback-controls'),
       playBtn: panel.querySelector('#csv-play-btn'),
       stopBtn: panel.querySelector('#csv-stop-btn'),
@@ -393,6 +420,12 @@ export class CSVMotionUI {
         const repeatCount = parseInt(this.elements.quickMoveRepeat.value) || 1;
         this.executeQuickMovement(motionFile, repeatCount);
       });
+    });
+
+    this.elements.keyboardToggle.addEventListener('change', (e) => {
+      if (this.onKeyboardToggleCallback) {
+        this.onKeyboardToggleCallback(e.target.checked);
+      }
     });
 
     this.elements.speedSlider.addEventListener('input', (e) => {
@@ -541,6 +574,16 @@ export class CSVMotionUI {
 
   update() {
     this.motionController.update();
+  }
+
+  onKeyboardToggle(callback) {
+    this.onKeyboardToggleCallback = callback;
+  }
+
+  setKeyboardEnabled(enabled) {
+    if (this.elements.keyboardToggle) {
+      this.elements.keyboardToggle.checked = enabled;
+    }
   }
 
   dispose() {
