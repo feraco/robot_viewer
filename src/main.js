@@ -23,6 +23,7 @@ import { KeyboardMotionController } from './controllers/KeyboardMotionController
 import { KeyboardIndicatorUI } from './ui/KeyboardIndicatorUI.js';
 import { JointGraphUI } from './ui/JointGraphUI.js';
 import { i18n } from './utils/i18n.js';
+import { SampleLoader } from './loaders/SampleLoader.js';
 
 // Expose d3 globally for PanelManager
 window.d3 = d3;
@@ -52,6 +53,7 @@ class App {
         this.keyboardIndicatorUI = null;
         this.keyboardHelpOverlay = null;
         this.jointGraphUI = null;
+        this.sampleLoader = null;
         this.currentModel = null;
         this.currentMJCFFile = null;
         this.currentMJCFModel = null;
@@ -222,6 +224,11 @@ class App {
 
             // Update editor button visibility
             this.updateEditorButtonVisibility();
+
+            // Initialize sample loader after CSV motion controller is ready
+            // Note: Will be fully initialized after first model load
+            this.sampleLoader = new SampleLoader(this.fileHandler, null);
+            this.sampleLoader.initializeSampleSelectors();
 
             // Start render loop
             this.animate();
@@ -506,6 +513,12 @@ class App {
             const csvMotionContainer = document.getElementById('csv-motion-container');
             if (csvMotionContainer && !this.csvMotionUI) {
                 this.csvMotionUI = new CSVMotionUI(csvMotionContainer, this.csvMotionController, this.sequenceManager);
+            }
+
+            // Update sample loader with CSV motion controller and UI references
+            if (this.sampleLoader) {
+                this.sampleLoader.csvMotionController = this.csvMotionController;
+                this.sampleLoader.csvMotionUI = this.csvMotionUI;
             }
 
             // Initialize joint graph UI if not exists

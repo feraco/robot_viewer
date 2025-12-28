@@ -1,9 +1,10 @@
 import { SAMPLE_MODELS, SAMPLE_MOTIONS } from '../config/samples.js';
 
 export class SampleLoader {
-  constructor(fileHandler, csvMotionController) {
+  constructor(fileHandler, csvMotionController, csvMotionUI) {
     this.fileHandler = fileHandler;
     this.csvMotionController = csvMotionController;
+    this.csvMotionUI = csvMotionUI;
   }
 
   initializeSampleSelectors() {
@@ -86,8 +87,10 @@ export class SampleLoader {
         type: 'text/csv'
       });
 
-      if (this.csvMotionController && this.csvMotionController.ui) {
-        await this.csvMotionController.ui.handleCSVFile(file);
+      if (this.csvMotionUI) {
+        await this.csvMotionUI.handleCSVFile(file);
+      } else {
+        console.warn('CSV Motion UI not initialized yet. Please load a model first.');
       }
 
     } catch (error) {
