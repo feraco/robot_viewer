@@ -497,6 +497,29 @@ class App {
                 this.preloadCSVMotions();
             }
 
+            // Initialize keyboard motion controller for CSV motion (but don't enable it automatically)
+            if (!this.keyboardMotionController) {
+                console.log('Initializing Keyboard Motion Controller for CSV motion...');
+                this.keyboardMotionController = new KeyboardMotionController(this.csvMotionController);
+
+                this.keyboardMotionController.on('keyStateChange', (activeKeys) => {
+                    if (this.keyboardIndicatorUI) {
+                        this.keyboardIndicatorUI.updateKeyStates(activeKeys);
+                    }
+                });
+
+                this.keyboardMotionController.on('speedChange', (speed) => {
+                    if (this.keyboardIndicatorUI) {
+                        this.keyboardIndicatorUI.updateSpeed(speed);
+                    }
+                });
+
+                console.log('Keyboard motion controller initialized (disabled by default)');
+            } else {
+                // Update the motion controller reference if it already exists
+                this.keyboardMotionController.motionController = this.csvMotionController;
+            }
+
             // Initialize CSV motion UI if not exists
             const csvMotionContainer = document.getElementById('csv-motion-container');
             if (csvMotionContainer && !this.csvMotionUI) {
@@ -1016,24 +1039,30 @@ class App {
                 // Start simulation immediately
                 this.mujocoSimulationManager.startSimulation();
 
-                // Initialize keyboard motion controller (but don't enable it automatically)
-                if (this.mujocoSimulationManager.motionController && !this.keyboardMotionController) {
-                    console.log('Initializing Keyboard Motion Controller...');
-                    this.keyboardMotionController = new KeyboardMotionController(this.mujocoSimulationManager.motionController);
+                // Update keyboard motion controller to use Mujoco motion controller
+                if (this.mujocoSimulationManager.motionController) {
+                    if (!this.keyboardMotionController) {
+                        console.log('Initializing Keyboard Motion Controller for Mujoco...');
+                        this.keyboardMotionController = new KeyboardMotionController(this.mujocoSimulationManager.motionController);
 
-                    this.keyboardMotionController.on('keyStateChange', (activeKeys) => {
-                        if (this.keyboardIndicatorUI) {
-                            this.keyboardIndicatorUI.updateKeyStates(activeKeys);
-                        }
-                    });
+                        this.keyboardMotionController.on('keyStateChange', (activeKeys) => {
+                            if (this.keyboardIndicatorUI) {
+                                this.keyboardIndicatorUI.updateKeyStates(activeKeys);
+                            }
+                        });
 
-                    this.keyboardMotionController.on('speedChange', (speed) => {
-                        if (this.keyboardIndicatorUI) {
-                            this.keyboardIndicatorUI.updateSpeed(speed);
-                        }
-                    });
+                        this.keyboardMotionController.on('speedChange', (speed) => {
+                            if (this.keyboardIndicatorUI) {
+                                this.keyboardIndicatorUI.updateSpeed(speed);
+                            }
+                        });
 
-                    console.log('Keyboard motion controller initialized (disabled by default)');
+                        console.log('Keyboard motion controller initialized (disabled by default)');
+                    } else {
+                        // Update the motion controller reference to use Mujoco's
+                        console.log('Updating keyboard motion controller to use Mujoco motion controller');
+                        this.keyboardMotionController.motionController = this.mujocoSimulationManager.motionController;
+                    }
                 }
 
                 return true;
