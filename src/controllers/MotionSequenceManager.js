@@ -118,8 +118,6 @@ export class MotionSequenceManager {
       return;
     }
 
-    this.controller.resetAccumulatedTransforms();
-
     this.loopSequence = loop;
     this.isPlayingSequence = true;
     this.currentIndex = 0;
