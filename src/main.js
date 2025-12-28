@@ -497,10 +497,16 @@ class App {
                 this.preloadCSVMotions();
             }
 
+            // Initialize CSV motion UI if not exists
+            const csvMotionContainer = document.getElementById('csv-motion-container');
+            if (csvMotionContainer && !this.csvMotionUI) {
+                this.csvMotionUI = new CSVMotionUI(csvMotionContainer, this.csvMotionController, this.sequenceManager);
+            }
+
             // Initialize keyboard motion controller for CSV motion (but don't enable it automatically)
             if (!this.keyboardMotionController) {
                 console.log('Initializing Keyboard Motion Controller for CSV motion...');
-                this.keyboardMotionController = new KeyboardMotionController(this.csvMotionController);
+                this.keyboardMotionController = new KeyboardMotionController(this.csvMotionController, this.csvMotionUI);
 
                 this.keyboardMotionController.on('keyStateChange', (activeKeys) => {
                     if (this.keyboardIndicatorUI) {
@@ -516,16 +522,13 @@ class App {
 
                 console.log('Keyboard motion controller initialized (disabled by default)');
             } else {
-                // Update the motion controller reference if it already exists
+                // Update the motion controller and UI references if they already exist
                 this.keyboardMotionController.motionController = this.csvMotionController;
+                this.keyboardMotionController.csvMotionUI = this.csvMotionUI;
             }
 
-            // Initialize CSV motion UI if not exists
-            const csvMotionContainer = document.getElementById('csv-motion-container');
-            if (csvMotionContainer && !this.csvMotionUI) {
-                this.csvMotionUI = new CSVMotionUI(csvMotionContainer, this.csvMotionController, this.sequenceManager);
-
-                // Wire up keyboard toggle
+            // Wire up keyboard toggle
+            if (this.csvMotionUI) {
                 this.csvMotionUI.onKeyboardToggle((enabled) => {
                     console.log('Keyboard control toggled:', enabled);
                     if (enabled) {

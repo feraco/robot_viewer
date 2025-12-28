@@ -1,14 +1,15 @@
 export class KeyboardMotionController {
-  constructor(motionController) {
+  constructor(motionController, csvMotionUI = null) {
     this.motionController = motionController;
+    this.csvMotionUI = csvMotionUI;
     this.activeKeys = new Set();
     this.currentMotion = null;
     this.speed = 1.0;
     this.keyBindings = {
-      'ArrowUp': 'walk_forward',
-      'ArrowDown': 'walk_backward',
-      'ArrowLeft': 'turn_left',
-      'ArrowRight': 'turn_right'
+      'ArrowUp': 'walk_forward_05-11s_30fps copy',
+      'ArrowDown': 'g1_walk_backward',
+      'ArrowLeft': 'g1_turn_left',
+      'ArrowRight': 'g1_turn_right'
     };
     this.isEnabled = false;
     this.listeners = new Map();
@@ -103,21 +104,20 @@ export class KeyboardMotionController {
     return false;
   }
 
-  startMotion(presetId) {
-    if (this.currentMotion === presetId) return;
+  async startMotion(motionFile) {
+    if (this.currentMotion === motionFile) return;
 
-    this.currentMotion = presetId;
+    this.currentMotion = motionFile;
 
-    const params = { speed: this.speed, direction: 0 };
+    // Use CSV motion UI if available
+    if (this.csvMotionUI && typeof this.csvMotionUI.executeQuickMovement === 'function') {
+      await this.csvMotionUI.executeQuickMovement(motionFile, 1);
+      return;
+    }
 
-    if (presetId === 'walk_backward') {
-      this.motionController.playMotion('walk_forward', {
-        speed: this.speed,
-        loop: true,
-        params: { speed: this.speed, direction: 180 }
-      });
-    } else {
-      this.motionController.playMotion(presetId, {
+    // Fallback to motion controller playMotion if available (for Mujoco)
+    if (this.motionController && typeof this.motionController.playMotion === 'function') {
+      this.motionController.playMotion(motionFile, {
         speed: this.speed,
         loop: true
       });
@@ -126,7 +126,14 @@ export class KeyboardMotionController {
 
   stopCurrentMotion() {
     if (this.currentMotion) {
-      this.motionController.stopMotion();
+      // Stop CSV motion
+      if (this.motionController && typeof this.motionController.stop === 'function') {
+        this.motionController.stop();
+      }
+      // Fallback for Mujoco motion controller
+      if (this.motionController && typeof this.motionController.stopMotion === 'function') {
+        this.motionController.stopMotion();
+      }
       this.currentMotion = null;
     }
   }
