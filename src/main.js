@@ -311,10 +311,33 @@ class App {
                     span.textContent = window.i18n?.t('mujocoSimulate') || 'Simulate';
                 }
             }
+
+            // Initialize keyboard UI elements when MJCF model is loaded
+            if (!this.keyboardIndicatorUI) {
+                this.keyboardIndicatorUI = new KeyboardIndicatorUI();
+                const indicator = this.keyboardIndicatorUI.createIndicator();
+                document.body.appendChild(indicator);
+            }
+
+            if (!this.keyboardHelpOverlay) {
+                this.keyboardHelpOverlay = new KeyboardHelpOverlay();
+                const helpOverlay = this.keyboardHelpOverlay.createOverlay();
+                document.body.appendChild(helpOverlay);
+            }
+
+            // Show keyboard indicator (but don't enable controller until simulation starts)
+            if (this.keyboardIndicatorUI) {
+                this.keyboardIndicatorUI.show();
+            }
         } else {
             // Hide simulation control bar (non-MJCF files)
             const simulationBar = document.getElementById('mujoco-simulation-bar');
             if (simulationBar) simulationBar.style.display = 'none';
+
+            // Hide keyboard controls for non-MJCF files
+            if (this.keyboardIndicatorUI) {
+                this.keyboardIndicatorUI.hide();
+            }
 
             this.currentMJCFFile = null;
             this.currentMJCFModel = null;
@@ -997,18 +1020,10 @@ class App {
                     this.motionControlsUI.show();
                 }
 
-                // Initialize keyboard controls
+                // Initialize keyboard motion controller
                 if (this.mujocoSimulationManager.motionController && !this.keyboardMotionController) {
                     console.log('Initializing Keyboard Motion Controller...');
                     this.keyboardMotionController = new KeyboardMotionController(this.mujocoSimulationManager.motionController);
-
-                    this.keyboardIndicatorUI = new KeyboardIndicatorUI();
-                    const indicator = this.keyboardIndicatorUI.createIndicator();
-                    document.body.appendChild(indicator);
-
-                    this.keyboardHelpOverlay = new KeyboardHelpOverlay();
-                    const helpOverlay = this.keyboardHelpOverlay.createOverlay();
-                    document.body.appendChild(helpOverlay);
 
                     this.keyboardMotionController.on('keyStateChange', (activeKeys) => {
                         if (this.keyboardIndicatorUI) {
@@ -1029,14 +1044,13 @@ class App {
                     });
 
                     this.keyboardMotionController.enable();
-                    this.keyboardIndicatorUI.show();
                     console.log('Keyboard controls enabled');
-                } else if (this.keyboardMotionController) {
+                }
+
+                // Enable keyboard controller if it already exists
+                if (this.keyboardMotionController) {
                     this.keyboardMotionController.enable();
-                    if (this.keyboardIndicatorUI) {
-                        this.keyboardIndicatorUI.show();
-                    }
-                    console.log('Keyboard controls re-enabled');
+                    console.log('Keyboard controls enabled');
                 }
 
                 return true;
