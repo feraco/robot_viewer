@@ -1,11 +1,17 @@
 <mujoco model="simple_car">
   <compiler angle="radian" autolimits="true"/>
 
-  <option timestep="0.002" gravity="0 0 -9.81"/>
+  <option timestep="0.005" gravity="0 0 -9.81" iterations="50" solver="Newton" tolerance="1e-10">
+    <flag warmstart="enable"/>
+  </option>
 
   <visual>
     <headlight ambient="0.5 0.5 0.5"/>
   </visual>
+
+  <default>
+    <geom condim="4" friction="1.0 0.005 0.0001" solimp="0.9 0.95 0.001" solref="0.02 1"/>
+  </default>
 
   <asset>
     <texture name="grid" type="2d" builtin="checker" width="512" height="512" rgb1="0.2 0.3 0.4" rgb2="0.1 0.15 0.2"/>
@@ -16,57 +22,64 @@
 
   <worldbody>
     <light pos="0 0 3" dir="0 0 -1" diffuse="0.8 0.8 0.8"/>
-    <geom name="floor" size="20 20 0.1" type="plane" material="grid"/>
+    <geom name="floor" size="20 20 0.1" type="plane" material="grid" friction="1.5 0.005 0.0001"/>
 
     <!-- Car Chassis -->
     <body name="chassis" pos="0 0 0.3">
       <freejoint/>
-      <geom name="chassis_main" type="box" size="0.5 0.3 0.1" rgba="0.8 0.1 0.1 1" mass="10"/>
-      <geom name="chassis_front" type="box" size="0.15 0.25 0.08" pos="0.4 0 0.05" rgba="0.7 0.7 0.8 0.9" mass="2"/>
+      <inertial pos="0 0 0" mass="15" diaginertia="1.0 2.0 1.5"/>
+      <geom name="chassis_main" type="box" size="0.5 0.3 0.08" rgba="0.8 0.1 0.1 1"/>
+      <geom name="chassis_front" type="box" size="0.15 0.25 0.08" pos="0.4 0 0.05" rgba="0.7 0.7 0.8 0.9"/>
 
       <!-- Front Left Wheel -->
-      <body name="front_left_steering" pos="0.35 0.35 -0.05">
-        <joint name="front_left_steer" type="hinge" axis="0 0 1" range="-0.5 0.5" damping="1"/>
-        <geom name="steering_left" type="cylinder" size="0.02 0.05" rgba="0.5 0.5 0.5 1" mass="0.1"/>
-        <body name="front_left_wheel" pos="0 0 0">
-          <joint name="front_left_wheel" type="hinge" axis="0 1 0" damping="0.1"/>
-          <geom name="wheel_fl" type="cylinder" size="0.12 0.05" rgba="0.1 0.1 0.1 1" mass="1" euler="1.5708 0 0"/>
+      <body name="front_left_steering" pos="0.35 0.35 -0.08">
+        <inertial pos="0 0 0" mass="0.5" diaginertia="0.01 0.01 0.01"/>
+        <joint name="front_left_steer" type="hinge" axis="0 0 1" range="-0.5 0.5" damping="5" armature="0.01"/>
+        <geom name="steering_left" type="cylinder" size="0.015 0.03" rgba="0.5 0.5 0.5 1"/>
+        <body name="front_left_wheel" pos="0 0 -0.04">
+          <inertial pos="0 0 0" mass="2" diaginertia="0.02 0.02 0.02"/>
+          <joint name="front_left_wheel" type="hinge" axis="0 1 0" damping="0.5" armature="0.01"/>
+          <geom name="wheel_fl" type="cylinder" size="0.12 0.04" rgba="0.1 0.1 0.1 1" euler="1.5708 0 0" friction="1.5 0.005 0.0001"/>
         </body>
       </body>
 
       <!-- Front Right Wheel -->
-      <body name="front_right_steering" pos="0.35 -0.35 -0.05">
-        <joint name="front_right_steer" type="hinge" axis="0 0 1" range="-0.5 0.5" damping="1"/>
-        <geom name="steering_right" type="cylinder" size="0.02 0.05" rgba="0.5 0.5 0.5 1" mass="0.1"/>
-        <body name="front_right_wheel" pos="0 0 0">
-          <joint name="front_right_wheel" type="hinge" axis="0 1 0" damping="0.1"/>
-          <geom name="wheel_fr" type="cylinder" size="0.12 0.05" rgba="0.1 0.1 0.1 1" mass="1" euler="1.5708 0 0"/>
+      <body name="front_right_steering" pos="0.35 -0.35 -0.08">
+        <inertial pos="0 0 0" mass="0.5" diaginertia="0.01 0.01 0.01"/>
+        <joint name="front_right_steer" type="hinge" axis="0 0 1" range="-0.5 0.5" damping="5" armature="0.01"/>
+        <geom name="steering_right" type="cylinder" size="0.015 0.03" rgba="0.5 0.5 0.5 1"/>
+        <body name="front_right_wheel" pos="0 0 -0.04">
+          <inertial pos="0 0 0" mass="2" diaginertia="0.02 0.02 0.02"/>
+          <joint name="front_right_wheel" type="hinge" axis="0 1 0" damping="0.5" armature="0.01"/>
+          <geom name="wheel_fr" type="cylinder" size="0.12 0.04" rgba="0.1 0.1 0.1 1" euler="1.5708 0 0" friction="1.5 0.005 0.0001"/>
         </body>
       </body>
 
       <!-- Rear Left Wheel -->
-      <body name="rear_left_wheel" pos="-0.35 0.35 -0.05">
-        <joint name="rear_left_wheel" type="hinge" axis="0 1 0" damping="0.1"/>
-        <geom name="wheel_rl" type="cylinder" size="0.12 0.05" rgba="0.1 0.1 0.1 1" mass="1" euler="1.5708 0 0"/>
+      <body name="rear_left_wheel" pos="-0.35 0.35 -0.12">
+        <inertial pos="0 0 0" mass="2" diaginertia="0.02 0.02 0.02"/>
+        <joint name="rear_left_wheel" type="hinge" axis="0 1 0" damping="0.5" armature="0.01"/>
+        <geom name="wheel_rl" type="cylinder" size="0.12 0.04" rgba="0.1 0.1 0.1 1" euler="1.5708 0 0" friction="1.5 0.005 0.0001"/>
       </body>
 
       <!-- Rear Right Wheel -->
-      <body name="rear_right_wheel" pos="-0.35 -0.35 -0.05">
-        <joint name="rear_right_wheel" type="hinge" axis="0 1 0" damping="0.1"/>
-        <geom name="wheel_rr" type="cylinder" size="0.12 0.05" rgba="0.1 0.1 0.1 1" mass="1" euler="1.5708 0 0"/>
+      <body name="rear_right_wheel" pos="-0.35 -0.35 -0.12">
+        <inertial pos="0 0 0" mass="2" diaginertia="0.02 0.02 0.02"/>
+        <joint name="rear_right_wheel" type="hinge" axis="0 1 0" damping="0.5" armature="0.01"/>
+        <geom name="wheel_rr" type="cylinder" size="0.12 0.04" rgba="0.1 0.1 0.1 1" euler="1.5708 0 0" friction="1.5 0.005 0.0001"/>
       </body>
     </body>
   </worldbody>
 
   <actuator>
     <!-- Steering actuators -->
-    <position name="steer_left" joint="front_left_steer" kp="100"/>
-    <position name="steer_right" joint="front_right_steer" kp="100"/>
+    <position name="steer_left" joint="front_left_steer" kp="50" ctrlrange="-0.5 0.5"/>
+    <position name="steer_right" joint="front_right_steer" kp="50" ctrlrange="-0.5 0.5"/>
 
     <!-- Wheel drive actuators -->
-    <velocity name="drive_fl" joint="front_left_wheel" kv="10"/>
-    <velocity name="drive_fr" joint="front_right_wheel" kv="10"/>
-    <velocity name="drive_rl" joint="rear_left_wheel" kv="10"/>
-    <velocity name="drive_rr" joint="rear_right_wheel" kv="10"/>
+    <velocity name="drive_fl" joint="front_left_wheel" kv="1" ctrlrange="-20 20"/>
+    <velocity name="drive_fr" joint="front_right_wheel" kv="1" ctrlrange="-20 20"/>
+    <velocity name="drive_rl" joint="rear_left_wheel" kv="1" ctrlrange="-20 20"/>
+    <velocity name="drive_rr" joint="rear_right_wheel" kv="1" ctrlrange="-20 20"/>
   </actuator>
 </mujoco>
