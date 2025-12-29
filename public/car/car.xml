@@ -1,0 +1,72 @@
+<mujoco model="simple_car">
+  <compiler angle="radian" autolimits="true"/>
+
+  <option timestep="0.002" gravity="0 0 -9.81"/>
+
+  <visual>
+    <headlight ambient="0.5 0.5 0.5"/>
+  </visual>
+
+  <asset>
+    <texture name="grid" type="2d" builtin="checker" width="512" height="512" rgb1="0.2 0.3 0.4" rgb2="0.1 0.15 0.2"/>
+    <material name="grid" texture="grid" texrepeat="1 1" texuniform="true" reflectance="0.2"/>
+    <material name="chassis" rgba="0.8 0.1 0.1 1"/>
+    <material name="wheel" rgba="0.1 0.1 0.1 1"/>
+  </asset>
+
+  <worldbody>
+    <light pos="0 0 3" dir="0 0 -1" diffuse="0.8 0.8 0.8"/>
+    <geom name="floor" size="20 20 0.1" type="plane" material="grid"/>
+
+    <!-- Car Chassis -->
+    <body name="chassis" pos="0 0 0.3">
+      <freejoint/>
+      <geom name="chassis_main" type="box" size="0.5 0.3 0.1" rgba="0.8 0.1 0.1 1" mass="10"/>
+      <geom name="chassis_front" type="box" size="0.15 0.25 0.08" pos="0.4 0 0.05" rgba="0.7 0.7 0.8 0.9" mass="2"/>
+
+      <!-- Front Left Wheel -->
+      <body name="front_left_steering" pos="0.35 0.35 -0.05">
+        <joint name="front_left_steer" type="hinge" axis="0 0 1" range="-0.5 0.5" damping="1"/>
+        <geom name="steering_left" type="cylinder" size="0.02 0.05" rgba="0.5 0.5 0.5 1" mass="0.1"/>
+        <body name="front_left_wheel" pos="0 0 0">
+          <joint name="front_left_wheel" type="hinge" axis="0 1 0" damping="0.1"/>
+          <geom name="wheel_fl" type="cylinder" size="0.12 0.05" rgba="0.1 0.1 0.1 1" mass="1" euler="1.5708 0 0"/>
+        </body>
+      </body>
+
+      <!-- Front Right Wheel -->
+      <body name="front_right_steering" pos="0.35 -0.35 -0.05">
+        <joint name="front_right_steer" type="hinge" axis="0 0 1" range="-0.5 0.5" damping="1"/>
+        <geom name="steering_right" type="cylinder" size="0.02 0.05" rgba="0.5 0.5 0.5 1" mass="0.1"/>
+        <body name="front_right_wheel" pos="0 0 0">
+          <joint name="front_right_wheel" type="hinge" axis="0 1 0" damping="0.1"/>
+          <geom name="wheel_fr" type="cylinder" size="0.12 0.05" rgba="0.1 0.1 0.1 1" mass="1" euler="1.5708 0 0"/>
+        </body>
+      </body>
+
+      <!-- Rear Left Wheel -->
+      <body name="rear_left_wheel" pos="-0.35 0.35 -0.05">
+        <joint name="rear_left_wheel" type="hinge" axis="0 1 0" damping="0.1"/>
+        <geom name="wheel_rl" type="cylinder" size="0.12 0.05" rgba="0.1 0.1 0.1 1" mass="1" euler="1.5708 0 0"/>
+      </body>
+
+      <!-- Rear Right Wheel -->
+      <body name="rear_right_wheel" pos="-0.35 -0.35 -0.05">
+        <joint name="rear_right_wheel" type="hinge" axis="0 1 0" damping="0.1"/>
+        <geom name="wheel_rr" type="cylinder" size="0.12 0.05" rgba="0.1 0.1 0.1 1" mass="1" euler="1.5708 0 0"/>
+      </body>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <!-- Steering actuators -->
+    <position name="steer_left" joint="front_left_steer" kp="100"/>
+    <position name="steer_right" joint="front_right_steer" kp="100"/>
+
+    <!-- Wheel drive actuators -->
+    <velocity name="drive_fl" joint="front_left_wheel" kv="10"/>
+    <velocity name="drive_fr" joint="front_right_wheel" kv="10"/>
+    <velocity name="drive_rl" joint="rear_left_wheel" kv="10"/>
+    <velocity name="drive_rr" joint="rear_right_wheel" kv="10"/>
+  </actuator>
+</mujoco>
