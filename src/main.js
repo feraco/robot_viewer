@@ -534,6 +534,7 @@ class App {
             if (!this.keyboardMotionController) {
                 console.log('Initializing Keyboard Motion Controller for CSV motion...');
                 this.keyboardMotionController = new KeyboardMotionController(this.csvMotionController, this.csvMotionUI);
+                this.keyboardMotionController.sceneManager = this.sceneManager;
 
                 this.keyboardMotionController.on('keyStateChange', (activeKeys) => {
                     if (this.keyboardIndicatorUI) {
@@ -552,6 +553,7 @@ class App {
                 // Update the motion controller and UI references if they already exist
                 this.keyboardMotionController.motionController = this.csvMotionController;
                 this.keyboardMotionController.csvMotionUI = this.csvMotionUI;
+                this.keyboardMotionController.sceneManager = this.sceneManager;
             }
 
             // Wire up keyboard toggle

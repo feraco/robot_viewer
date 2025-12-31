@@ -31,8 +31,12 @@ export class SceneManager {
         const width = canvas.clientWidth;
         const height = canvas.clientHeight;
         this.camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
-        this.camera.position.set(2, 2, 2);
+        this.camera.position.set(4, 4, 3);
         this.camera.lookAt(0, 0, 0);
+
+        // Camera following state
+        this.cameraFollowEnabled = false;
+        this.cameraFollowTarget = null;
 
         // Renderer
         this.renderer = new THREE.WebGLRenderer({
@@ -421,7 +425,7 @@ export class SceneManager {
 
         // Check if single mesh model (no joints)
         const isSingleMesh = !this.currentModel || !this.currentModel.joints || this.currentModel.joints.size === 0;
-        const distanceMultiplier = isSingleMesh ? 2.5 : 1.8;  // Single mesh: 2.5x distance, robot model: 1.8x distance
+        const distanceMultiplier = isSingleMesh ? 2.5 : 2.5;  // Increased zoom out for better view
 
         const distance = maxDim / (2 * Math.tan(fov / 2)) * distanceMultiplier;
 
@@ -989,7 +993,40 @@ export class SceneManager {
         this._eventListeners[eventName].forEach(callback => callback(...args));
     }
 
+    // ==================== Camera Following ====================
+
+    enableCameraFollow(robotModel) {
+        this.cameraFollowEnabled = true;
+        this.cameraFollowTarget = robotModel;
+    }
+
+    disableCameraFollow() {
+        this.cameraFollowEnabled = false;
+        this.cameraFollowTarget = null;
+    }
+
+    updateCameraFollow() {
+        if (!this.cameraFollowEnabled || !this.cameraFollowTarget || !this.cameraFollowTarget.threeObject) {
+            return;
+        }
+
+        const robotPosition = this.cameraFollowTarget.threeObject.position;
+        const currentTarget = this.controls.target.clone();
+        const targetPosition = new THREE.Vector3(robotPosition.x, robotPosition.y, 0.5);
+
+        const smoothFactor = 0.1;
+        currentTarget.lerp(targetPosition, smoothFactor);
+        this.controls.target.copy(currentTarget);
+
+        const cameraOffset = this.camera.position.clone().sub(this.controls.target);
+        this.camera.position.copy(currentTarget).add(cameraOffset);
+
+        this.controls.update();
+        this.redraw();
+    }
+
     update() {
         this.controls.update();
+        this.updateCameraFollow();
     }
 }

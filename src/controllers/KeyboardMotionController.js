@@ -13,6 +13,7 @@ export class KeyboardMotionController {
     };
     this.isEnabled = false;
     this.listeners = new Map();
+    this.sceneManager = null;
 
     this.boundHandleKeyDown = this.handleKeyDown.bind(this);
     this.boundHandleKeyUp = this.handleKeyUp.bind(this);
@@ -109,6 +110,10 @@ export class KeyboardMotionController {
 
     this.currentMotion = motionFile;
 
+    if (this.sceneManager && this.motionController && this.motionController.robotModel) {
+      this.sceneManager.enableCameraFollow(this.motionController.robotModel);
+    }
+
     // Use CSV motion UI if available
     if (this.csvMotionUI && typeof this.csvMotionUI.executeQuickMovement === 'function') {
       await this.csvMotionUI.executeQuickMovement(motionFile, 1);
@@ -126,6 +131,10 @@ export class KeyboardMotionController {
 
   stopCurrentMotion() {
     if (this.currentMotion) {
+      if (this.sceneManager) {
+        this.sceneManager.disableCameraFollow();
+      }
+
       // Stop CSV motion
       if (this.motionController && typeof this.motionController.stop === 'function') {
         this.motionController.stop();
