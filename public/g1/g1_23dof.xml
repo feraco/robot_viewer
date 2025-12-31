@@ -376,6 +376,16 @@
     <motor name="right_wrist_yaw" joint="right_wrist_yaw_joint" ctrlrange="-5 5" />
   </actuator>
 
+  <keyframe>
+    <key name="standing"
+         qpos="0 0 0.793 1 0 0 0
+               0 0 0 0 0 0
+               0 0 0 0 0 0
+               0 0 0
+               0 0 0 0
+               0 0 0 0" />
+  </keyframe>
+
   <sensor>
     <jointpos name="left_hip_pitch_pos" joint="left_hip_pitch_joint" />
     <jointpos name="left_hip_roll_pos" joint="left_hip_roll_joint" />

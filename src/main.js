@@ -230,6 +230,9 @@ class App {
             this.sampleLoader = new SampleLoader(this.fileHandler, null);
             this.sampleLoader.initializeSampleSelectors();
 
+            // Preload G1 29DOF model by default
+            await this.sampleLoader.loadSampleModel(0);
+
             // Start render loop
             this.animate();
 
