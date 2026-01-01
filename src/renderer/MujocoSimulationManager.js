@@ -146,9 +146,39 @@ export class MujocoSimulationManager {
             // Reset simulation (compatible with old and new API)
             if (this.isOldAPI) {
                 this.mujoco.mj_resetData(this.model, this.data);
+
+                // Load the "standing" keyframe if it exists (keyframe 0)
+                if (this.model.nkey > 0) {
+                    this.mujoco.mj_resetDataKeyframe(this.model, this.data, 0);
+                }
+
+                // Initialize actuator controls to match current joint positions (standing pose)
+                // This prevents the robot from collapsing when position servos try to drive to zero
+                const nq = this.model.nq;
+                const nu = this.model.nu;
+
+                // Copy joint positions to actuator controls (for position actuators)
+                for (let i = 0; i < nu && i < (nq - 7); i++) {  // Skip first 7 DOF (free joint)
+                    this.data.ctrl[i] = this.data.qpos[i + 7];
+                }
+
                 this.mujoco.mj_forward(this.model, this.data);
             } else {
                 this.simulation.resetData();
+
+                // Load the "standing" keyframe if it exists
+                if (this.simulation.model.nkey > 0) {
+                    this.simulation.resetDataKeyframe(0);
+                }
+
+                // Initialize actuator controls to match current joint positions
+                const nq = this.simulation.model.nq;
+                const nu = this.simulation.model.nu;
+
+                for (let i = 0; i < nu && i < (nq - 7); i++) {
+                    this.simulation.ctrl[i] = this.simulation.qpos[i + 7];
+                }
+
                 this.simulation.forward();
             }
 
