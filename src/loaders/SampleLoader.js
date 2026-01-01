@@ -58,18 +58,76 @@ export class SampleLoader {
       });
 
       // Store the base URL for remote mesh loading (for MJCF files)
+      const baseUrl = sample.url.substring(0, sample.url.lastIndexOf('/') + 1);
       file.userData = {
-        baseUrl: sample.url.substring(0, sample.url.lastIndexOf('/') + 1)
+        baseUrl: baseUrl
       };
 
       // Add file to fileMap before loading
       this.fileHandler.fileMap.set(fileName, file);
+
+      // If MJCF file, also load all mesh files
+      if (sample.type === 'xml') {
+        await this.loadMeshFiles(content, baseUrl);
+      }
 
       await this.fileHandler.loadFile(file);
 
     } catch (error) {
       console.error('Failed to load sample model:', error);
       alert(`Failed to load sample model: ${error.message}`);
+    }
+  }
+
+  async loadMeshFiles(xmlContent, baseUrl) {
+    try {
+      // Parse XML to find mesh references
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(xmlContent, 'application/xml');
+
+      // Get compiler settings
+      const compilerEl = doc.querySelector('compiler');
+      const meshdir = compilerEl?.getAttribute('meshdir') || 'meshes';
+
+      // Find all mesh elements
+      const meshElements = doc.querySelectorAll('mesh[file]');
+      const meshFiles = Array.from(meshElements).map(el => el.getAttribute('file'));
+
+      if (meshFiles.length === 0) {
+        return;
+      }
+
+      console.log(`Loading ${meshFiles.length} mesh files from ${baseUrl}${meshdir}/...`);
+
+      // Load all mesh files in parallel
+      const meshPromises = meshFiles.map(async (meshFile) => {
+        try {
+          const meshUrl = `${baseUrl}${meshdir}/${meshFile}`;
+          const response = await fetch(meshUrl);
+
+          if (!response.ok) {
+            console.warn(`Failed to load mesh: ${meshFile} (${response.status})`);
+            return;
+          }
+
+          const blob = await response.blob();
+          const file = new File([blob], meshFile, { type: 'application/octet-stream' });
+
+          // Add to fileMap with multiple path variations for MuJoCo to find
+          this.fileHandler.fileMap.set(meshFile, file);
+          this.fileHandler.fileMap.set(`${meshdir}/${meshFile}`, file);
+          this.fileHandler.fileMap.set(`meshes/${meshFile}`, file);
+
+        } catch (error) {
+          console.warn(`Error loading mesh ${meshFile}:`, error);
+        }
+      });
+
+      await Promise.all(meshPromises);
+      console.log(`Successfully loaded ${meshFiles.length} mesh files`);
+
+    } catch (error) {
+      console.error('Error parsing mesh files from XML:', error);
     }
   }
 
