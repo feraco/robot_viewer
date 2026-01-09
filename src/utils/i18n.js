@@ -51,7 +51,7 @@ export const translations = {
         // 帮助对话框
         'helpTitle': `Robot Viewer v${APP_VERSION}`,
         'about': '关于',
-        'aboutContent': 'Robot Viewer 是一个基于 Three.js 的网页端机器人模型 3D 查看器，提供直观的可视化界面，帮助您在浏览器中查看和分析机器人的结构、关节和物理属性，无需安装任何软件。<br><br>格式支持：URDF、MJCF、USD（部分支持）<br>机器人类型：串联机器人结构（暂不支持并联机器人）<br><br>由 <strong>Frederick Feraco</strong> 开发，基于 <a href="https://github.com/fan-ziqi/robot_viewer" target="_blank" style="color: #4CAF50;">范子琦</a> 的原始项目构建。<br><br>新增功能：CSV动作导入、动作序列构建器、关节图表可视化、增强的键盘控制、Supabase集成等。',
+        'aboutContent': 'Robot Viewer 是一个基于 Three.js 的网页端机器人模型 3D 查看器，提供直观的可视化界面，帮助您在浏览器中查看和分析机器人的结构、关节和物理属性，无需安装任何软件。<br><br>格式支持：URDF、MJCF、USD（部分支持）<br>机器人类型：串联机器人结构（暂不支持并联机器人）<br><br>由 <strong>Frederick Feraco</strong> 开发。<br><br>功能：CSV动作导入、动作序列构建器、关节图表可视化、Supabase集成等。',
         'projectHome': '项目主页',
         'email': '邮箱',
         'myGithub': '我的GitHub',
@@ -174,7 +174,7 @@ export const translations = {
         // Help dialog
         'helpTitle': `Robot Viewer v${APP_VERSION}`,
         'about': 'About',
-        'aboutContent': 'Robot Viewer is a web-based 3D viewer for robot models and scenes. Built on top of Three.js, it provides an intuitive interface for visualizing, editing, and simulating robots directly in the browser without any installation required. This tool helps you visualize and analyze robot structures, joints, and physical properties.<br><br>Format Support: URDF, MJCF, USD (partial support)<br>Robot Types: Serial robot structures (parallel robots not currently supported)<br><br>Developed by <strong>Frederick Feraco</strong> (<a href="mailto:fred@robostore.com" style="color: #4CAF50;">fred@robostore.com</a>) - Built upon the original <a href="https://github.com/fan-ziqi/robot_viewer" target="_blank" style="color: #4CAF50;">Robot Viewer by Ziqi Fan</a>.<br><br>Enhanced Features: CSV Motion Import & Playback, Motion Sequence Builder, Joint Graph Visualization, Enhanced Keyboard Controls, Supabase Integration, and improved UI/UX.',
+        'aboutContent': 'Robot Viewer is a web-based 3D viewer for robot models and scenes. Built on top of Three.js, it provides an intuitive interface for visualizing, editing, and simulating robots directly in the browser without any installation required. This tool helps you visualize and analyze robot structures, joints, and physical properties.<br><br>Format Support: URDF, MJCF, USD (partial support)<br>Robot Types: Serial robot structures (parallel robots not currently supported)<br><br>Developed by <strong>Frederick Feraco</strong> (<a href="mailto:fred@robostore.com" style="color: #4CAF50;">fred@robostore.com</a>).<br><br>Features: CSV Motion Import & Playback, Motion Sequence Builder, Joint Graph Visualization, Supabase Integration, and improved UI/UX.',
         'projectHome': 'Project Home',
         'email': 'Email',
         'myGithub': 'My GitHub',
@@ -205,7 +205,7 @@ export const translations = {
         'dropHint': 'Drag and drop robot model files or folders anywhere',
         'dropHintSub': 'Supports URDF, MJCF formats<br>Supports folder dragging to load mesh files',
         'graphHint': 'Drag: Move | Scroll: Zoom | Right-click: Hide/Show | Ctrl+Click: Measure',
-        'copyright': '© 2025 Frederick Feraco. Built upon original work by Ziqi Fan.',
+        'copyright': '© 2025 Frederick Feraco.',
 
         // Model info
         'type': 'Type',
