@@ -19,8 +19,6 @@ import { MotionControlsUI } from './ui/MotionControlsUI.js';
 import { CSVMotionController } from './controllers/CSVMotionController.js';
 import { CSVMotionUI } from './ui/CSVMotionUI.js';
 import { MotionSequenceManager } from './controllers/MotionSequenceManager.js';
-import { KeyboardMotionController } from './controllers/KeyboardMotionController.js';
-import { KeyboardIndicatorUI } from './ui/KeyboardIndicatorUI.js';
 import { JointGraphUI } from './ui/JointGraphUI.js';
 import { i18n } from './utils/i18n.js';
 import { SampleLoader } from './loaders/SampleLoader.js';
@@ -49,9 +47,6 @@ class App {
         this.csvMotionController = null;
         this.csvMotionUI = null;
         this.sequenceManager = null;
-        this.keyboardMotionController = null;
-        this.keyboardIndicatorUI = null;
-        this.keyboardHelpOverlay = null;
         this.jointGraphUI = null;
         this.sampleLoader = null;
         this.currentModel = null;
@@ -277,14 +272,6 @@ class App {
         if (this.mujocoSimulationManager && this.mujocoSimulationManager.hasScene()) {
             // Always clear simulation when switching files (MJCF or non-MJCF)
             this.mujocoSimulationManager.clearScene();
-
-            // Disable keyboard controls when simulation is cleared
-            if (this.keyboardMotionController) {
-                this.keyboardMotionController.disable();
-            }
-            if (this.keyboardIndicatorUI) {
-                this.keyboardIndicatorUI.hide();
-            }
         }
 
         if (isMJCF && model.joints && model.joints.size > 0) {
@@ -325,23 +312,10 @@ class App {
                     span.textContent = window.i18n?.t('mujocoSimulate') || 'Simulate';
                 }
             }
-
-            // Initialize keyboard UI elements when MJCF model is loaded (but don't show them yet)
-            if (!this.keyboardIndicatorUI) {
-                this.keyboardIndicatorUI = new KeyboardIndicatorUI();
-                const indicator = this.keyboardIndicatorUI.createIndicator();
-                document.body.appendChild(indicator);
-                this.keyboardIndicatorUI.hide();
-            }
         } else {
             // Hide simulation control bar (non-MJCF files)
             const simulationBar = document.getElementById('mujoco-simulation-bar');
             if (simulationBar) simulationBar.style.display = 'none';
-
-            // Hide keyboard controls for non-MJCF files
-            if (this.keyboardIndicatorUI) {
-                this.keyboardIndicatorUI.hide();
-            }
 
             this.currentMJCFFile = null;
             this.currentMJCFModel = null;
@@ -528,54 +502,6 @@ class App {
             if (!this.jointGraphUI) {
                 this.jointGraphUI = new JointGraphUI(this.csvMotionController);
                 this.jointGraphUI.initialize();
-            }
-
-            // Initialize keyboard motion controller for CSV motion (but don't enable it automatically)
-            if (!this.keyboardMotionController) {
-                console.log('Initializing Keyboard Motion Controller for CSV motion...');
-                this.keyboardMotionController = new KeyboardMotionController(this.csvMotionController, this.csvMotionUI);
-                this.keyboardMotionController.sceneManager = this.sceneManager;
-
-                this.keyboardMotionController.on('keyStateChange', (activeKeys) => {
-                    if (this.keyboardIndicatorUI) {
-                        this.keyboardIndicatorUI.updateKeyStates(activeKeys);
-                    }
-                });
-
-                this.keyboardMotionController.on('speedChange', (speed) => {
-                    if (this.keyboardIndicatorUI) {
-                        this.keyboardIndicatorUI.updateSpeed(speed);
-                    }
-                });
-
-                console.log('Keyboard motion controller initialized (disabled by default)');
-            } else {
-                // Update the motion controller and UI references if they already exist
-                this.keyboardMotionController.motionController = this.csvMotionController;
-                this.keyboardMotionController.csvMotionUI = this.csvMotionUI;
-                this.keyboardMotionController.sceneManager = this.sceneManager;
-            }
-
-            // Wire up keyboard toggle
-            if (this.csvMotionUI) {
-                this.csvMotionUI.onKeyboardToggle((enabled) => {
-                    console.log('Keyboard control toggled:', enabled);
-                    if (enabled) {
-                        if (this.keyboardMotionController) {
-                            this.keyboardMotionController.enable();
-                            if (this.keyboardIndicatorUI) {
-                                this.keyboardIndicatorUI.show();
-                            }
-                        }
-                    } else {
-                        if (this.keyboardMotionController) {
-                            this.keyboardMotionController.disable();
-                            if (this.keyboardIndicatorUI) {
-                                this.keyboardIndicatorUI.hide();
-                            }
-                        }
-                    }
-                });
             }
 
             // Draw model graph
@@ -1092,32 +1018,6 @@ class App {
                 // Start simulation immediately
                 this.mujocoSimulationManager.startSimulation();
 
-                // Update keyboard motion controller to use Mujoco motion controller
-                if (this.mujocoSimulationManager.motionController) {
-                    if (!this.keyboardMotionController) {
-                        console.log('Initializing Keyboard Motion Controller for Mujoco...');
-                        this.keyboardMotionController = new KeyboardMotionController(this.mujocoSimulationManager.motionController);
-
-                        this.keyboardMotionController.on('keyStateChange', (activeKeys) => {
-                            if (this.keyboardIndicatorUI) {
-                                this.keyboardIndicatorUI.updateKeyStates(activeKeys);
-                            }
-                        });
-
-                        this.keyboardMotionController.on('speedChange', (speed) => {
-                            if (this.keyboardIndicatorUI) {
-                                this.keyboardIndicatorUI.updateSpeed(speed);
-                            }
-                        });
-
-                        console.log('Keyboard motion controller initialized (disabled by default)');
-                    } else {
-                        // Update the motion controller reference to use Mujoco's
-                        console.log('Updating keyboard motion controller to use Mujoco motion controller');
-                        this.keyboardMotionController.motionController = this.mujocoSimulationManager.motionController;
-                    }
-                }
-
                 return true;
             } catch (error) {
                 console.error('MuJoCo scene loading failed:', error);
@@ -1133,20 +1033,6 @@ class App {
             // Toggle original model visibility
             if (this.currentModel && this.currentModel.threeObject) {
                 this.currentModel.threeObject.visible = !isSimulating;
-            }
-
-            // Disable keyboard controls when simulation stops
-            if (!isSimulating) {
-                if (this.keyboardMotionController) {
-                    this.keyboardMotionController.disable();
-                    if (this.keyboardIndicatorUI) {
-                        this.keyboardIndicatorUI.hide();
-                    }
-                    // Reset toggle state in CSV Motion UI
-                    if (this.csvMotionUI) {
-                        this.csvMotionUI.setKeyboardEnabled(false);
-                    }
-                }
             }
 
             return isSimulating;
