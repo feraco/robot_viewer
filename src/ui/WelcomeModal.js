@@ -80,7 +80,7 @@ export class WelcomeModal {
           font-weight: 600;
           cursor: pointer;
           transition: all 0.2s;
-        ">📁 Upload Your Files</button>
+        ">Upload Your Files</button>
 
         <button id="welcome-browse-samples" style="
           flex: 1;
@@ -93,7 +93,7 @@ export class WelcomeModal {
           font-weight: 600;
           cursor: pointer;
           transition: all 0.2s;
-        ">🔍 Browse All Samples</button>
+        ">Browse All Samples</button>
       </div>
 
       <button id="welcome-skip-btn" style="
@@ -124,9 +124,8 @@ export class WelcomeModal {
   populateSampleModels(content) {
     const grid = content.querySelector('#sample-models-grid');
     const featuredSamples = [
-      { name: 'G1 Robot (23 DOF)', path: 'g1/scene_23dof.xml', icon: '🤖' },
-      { name: 'G1 Robot (29 DOF)', path: 'g1/scene_29dof.xml', icon: '🦾' },
-      { name: 'Simple Car', path: 'car/car.xml', icon: '🚗' }
+      { name: 'G1 Robot (23 DOF)', path: 'g1/scene_23dof.xml' },
+      { name: 'G1 Robot (29 DOF)', path: 'g1/scene_29dof.xml' }
     ];
 
     featuredSamples.forEach(sample => {
@@ -142,7 +141,6 @@ export class WelcomeModal {
       `;
 
       card.innerHTML = `
-        <div style="font-size: 48px; margin-bottom: 8px;">${sample.icon}</div>
         <div style="color: var(--text-primary); font-size: 14px; font-weight: 600;">${sample.name}</div>
       `;
 

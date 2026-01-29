@@ -44,7 +44,7 @@ export class CSVMotionUI {
           align-items: center;
           gap: 8px;
         ">
-          📁 Load Motion Data
+          Load Motion Data
         </div>
         <div style="
           color: var(--text-secondary);
@@ -285,7 +285,7 @@ export class CSVMotionUI {
         font-size: 11px;
         line-height: 1.5;
       ">
-        💡 <strong>Tip:</strong> Use the floating control bar at the bottom to play/pause motion with spacebar
+        <strong>Tip:</strong> Use the floating control bar at the bottom to play/pause motion with spacebar
       </div>
     `;
 

@@ -260,6 +260,16 @@ class App {
         try {
             await this.sequenceManager.preloadDefaultMotions('G1');
             console.log('CSV motions preloaded successfully');
+
+            const standMotion = this.sequenceManager.preloadedMotions.get('stand');
+            if (standMotion && this.csvMotionController) {
+                this.csvMotionController.loadMotion(standMotion, false);
+                setTimeout(() => {
+                    if (this.csvMotionController) {
+                        this.csvMotionController.play();
+                    }
+                }, 500);
+            }
         } catch (error) {
             console.warn('Failed to preload CSV motions:', error);
         }

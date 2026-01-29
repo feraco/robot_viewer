@@ -43,14 +43,15 @@ export class FloatingMotionControls {
         border: none;
         border-radius: 50%;
         cursor: pointer;
-        font-size: 24px;
+        font-size: 14px;
+        font-weight: 700;
         display: flex;
         align-items: center;
         justify-content: center;
         transition: all 0.3s var(--spring);
         box-shadow: 0 4px 16px rgba(76, 175, 80, 0.4);
       " title="Play/Pause (Space)">
-        ▶
+        Play
       </button>
 
       <div style="
@@ -128,13 +129,14 @@ export class FloatingMotionControls {
           border: 1px solid var(--glass-border);
           border-radius: 50%;
           cursor: pointer;
-          font-size: 14px;
+          font-size: 11px;
+          font-weight: 700;
           display: flex;
           align-items: center;
           justify-content: center;
           transition: all 0.2s;
         " title="Stop">
-          ■
+          Stop
         </button>
 
         <label style="
@@ -319,7 +321,7 @@ export class FloatingMotionControls {
   }
 
   updatePlayButton(isPlaying) {
-    this.elements.playBtn.textContent = isPlaying ? '⏸' : '▶';
+    this.elements.playBtn.textContent = isPlaying ? 'Pause' : 'Play';
     if (isPlaying) {
       this.elements.playBtn.style.background = 'linear-gradient(135deg, #ff9800 0%, #f57c00 100%)';
       this.elements.playBtn.style.boxShadow = '0 4px 16px rgba(255, 152, 0, 0.4)';
