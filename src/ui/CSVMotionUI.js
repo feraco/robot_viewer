@@ -28,8 +28,33 @@ export class CSVMotionUI {
     `;
 
     panel.innerHTML = `
-      <div>
-        <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+      <div style="
+        padding: 16px;
+        background: rgba(10, 132, 255, 0.1);
+        border: 1px solid rgba(10, 132, 255, 0.2);
+        border-radius: 12px;
+        margin-bottom: 16px;
+      ">
+        <div style="
+          color: var(--text-primary);
+          font-size: 13px;
+          font-weight: 600;
+          margin-bottom: 8px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        ">
+          📁 Load Motion Data
+        </div>
+        <div style="
+          color: var(--text-secondary);
+          font-size: 11px;
+          margin-bottom: 12px;
+          line-height: 1.4;
+        ">
+          Import CSV motion files to animate your robot
+        </div>
+        <div style="display: flex; gap: 8px;">
           <input
             type="file"
             id="csv-motion-file"
@@ -40,30 +65,31 @@ export class CSVMotionUI {
             id="csv-load-btn"
             style="
               flex: 1;
-              padding: 8px 12px;
+              padding: 10px 16px;
               background: var(--accent);
               color: white;
               border: none;
-              border-radius: 8px;
+              border-radius: 10px;
               cursor: pointer;
-              font-size: 12px;
-              font-weight: 500;
+              font-size: 13px;
+              font-weight: 600;
               transition: all 0.2s;
             "
           >
-            Load CSV
+            Choose CSV File
           </button>
 
           <select
             id="csv-robot-type"
             style="
-              padding: 8px 12px;
-              background: rgba(255, 255, 255, 0.08);
+              padding: 10px 12px;
+              background: rgba(255, 255, 255, 0.1);
               color: var(--text-primary);
               border: 1px solid var(--glass-border);
-              border-radius: 8px;
+              border-radius: 10px;
               font-size: 12px;
               cursor: pointer;
+              font-weight: 500;
             "
           >
             <option value="auto">Auto-detect</option>
@@ -74,263 +100,192 @@ export class CSVMotionUI {
         </div>
 
         <div id="csv-motion-info" style="
-          color: var(--text-tertiary);
+          color: var(--text-primary);
           font-size: 11px;
-          padding: 8px;
-          background: rgba(255, 255, 255, 0.05);
-          border-radius: 6px;
-          margin-bottom: 12px;
+          padding: 10px;
+          background: rgba(76, 175, 80, 0.15);
+          border: 1px solid rgba(76, 175, 80, 0.3);
+          border-radius: 8px;
+          margin-top: 12px;
           display: none;
+          font-weight: 500;
         "></div>
       </div>
 
       <div id="csv-sequence-builder-container" style="
-        margin-bottom: 12px;
+        margin-bottom: 16px;
       "></div>
 
-      <div id="csv-quick-movement-controls" style="
-        padding: 12px;
-        background: rgba(255, 255, 255, 0.05);
+      <details style="
+        background: rgba(255, 255, 255, 0.03);
         border: 1px solid var(--glass-border);
-        border-radius: 8px;
+        border-radius: 12px;
+        padding: 12px;
         margin-bottom: 12px;
-      ">
-        <div style="
+      " open>
+        <summary style="
           color: var(--text-primary);
-          font-size: 12px;
-          font-weight: 500;
-          margin-bottom: 10px;
-        ">Quick Movement Controls</div>
-
-        <div style="
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 6px;
-          margin-bottom: 10px;
-        ">
-          <button class="quick-move-btn" data-motion="walk_forward_05-11s_30fps copy" style="
-            padding: 8px;
-            background: rgba(76, 175, 80, 0.2);
-            color: #4caf50;
-            border: 1px solid rgba(76, 175, 80, 0.3);
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 11px;
-            font-weight: 500;
-            transition: all 0.2s;
-          ">↑ Forward</button>
-
-          <button class="quick-move-btn" data-motion="g1_walk_backward" style="
-            padding: 8px;
-            background: rgba(255, 152, 0, 0.2);
-            color: #ff9800;
-            border: 1px solid rgba(255, 152, 0, 0.3);
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 11px;
-            font-weight: 500;
-            transition: all 0.2s;
-          ">↓ Back</button>
-
-          <button class="quick-move-btn" data-motion="g1_stand" style="
-            padding: 8px;
-            background: rgba(96, 125, 139, 0.2);
-            color: #607d8b;
-            border: 1px solid rgba(96, 125, 139, 0.3);
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 11px;
-            font-weight: 500;
-            transition: all 0.2s;
-          ">Stand</button>
-
-          <button class="quick-move-btn" data-motion="g1_turn_left" style="
-            padding: 8px;
-            background: rgba(33, 150, 243, 0.2);
-            color: #2196f3;
-            border: 1px solid rgba(33, 150, 243, 0.3);
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 11px;
-            font-weight: 500;
-            transition: all 0.2s;
-          ">↺ Turn L</button>
-
-          <button class="quick-move-btn" data-motion="g1_turn_right" style="
-            padding: 8px;
-            background: rgba(33, 150, 243, 0.2);
-            color: #2196f3;
-            border: 1px solid rgba(33, 150, 243, 0.3);
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 11px;
-            font-weight: 500;
-            transition: all 0.2s;
-          ">↻ Turn R</button>
-
-          <button class="quick-move-btn" data-motion="g1_sidestep_left" style="
-            padding: 8px;
-            background: rgba(156, 39, 176, 0.2);
-            color: #9c27b0;
-            border: 1px solid rgba(156, 39, 176, 0.3);
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 11px;
-            font-weight: 500;
-            transition: all 0.2s;
-          ">← Side L</button>
-
-          <button class="quick-move-btn" data-motion="g1_sidestep_right" style="
-            padding: 8px;
-            background: rgba(156, 39, 176, 0.2);
-            color: #9c27b0;
-            border: 1px solid rgba(156, 39, 176, 0.3);
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 11px;
-            font-weight: 500;
-            transition: all 0.2s;
-          ">→ Side R</button>
-        </div>
-
-        <div style="
+          font-size: 13px;
+          font-weight: 600;
+          cursor: pointer;
+          user-select: none;
+          list-style: none;
           display: flex;
           align-items: center;
           gap: 8px;
         ">
-          <label style="
-            color: var(--text-secondary);
-            font-size: 11px;
-            font-weight: 500;
-          ">Repeat:</label>
-          <input
-            type="number"
-            id="quick-move-repeat"
-            min="1"
-            max="10"
-            value="1"
-            style="
-              width: 60px;
-              padding: 6px 8px;
-              background: rgba(255, 255, 255, 0.08);
-              color: var(--text-primary);
-              border: 1px solid var(--glass-border);
-              border-radius: 6px;
-              font-size: 11px;
-            "
-          />
           <span style="
-            color: var(--text-tertiary);
-            font-size: 10px;
-          ">times</span>
-        </div>
-      </div>
+            display: inline-block;
+            transition: transform 0.2s;
+          ">▶</span>
+          Quick Movement Controls
+        </summary>
 
-      <div id="csv-playback-controls" style="display: none; flex: 1; display: flex; flex-direction: column; gap: 12px;">
-        <div style="display: flex; gap: 8px; align-items: center;">
-          <button id="csv-play-btn" style="
-            padding: 8px 16px;
-            background: #4caf50;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 12px;
-            font-weight: 500;
-            transition: all 0.2s;
-          ">▶ Play</button>
-
-          <button id="csv-stop-btn" style="
-            padding: 8px 16px;
-            background: rgba(255, 255, 255, 0.08);
-            color: var(--text-primary);
-            border: 1px solid var(--glass-border);
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 12px;
-            font-weight: 500;
-            transition: all 0.2s;
-          ">■ Stop</button>
-
-          <label style="
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            color: var(--text-secondary);
-            font-size: 11px;
-            margin-left: auto;
-            cursor: pointer;
+        <div style="
+          margin-top: 12px;
+          padding-top: 12px;
+          border-top: 1px solid var(--glass-border);
+        ">
+          <div style="
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 12px;
           ">
-            <input type="checkbox" id="csv-loop" checked style="cursor: pointer;" />
-            Loop
-          </label>
-        </div>
+            <button class="quick-move-btn" data-motion="walk_forward_05-11s_30fps copy" style="
+              padding: 10px;
+              background: rgba(76, 175, 80, 0.15);
+              color: #4caf50;
+              border: 1px solid rgba(76, 175, 80, 0.3);
+              border-radius: 8px;
+              cursor: pointer;
+              font-size: 12px;
+              font-weight: 600;
+              transition: all 0.2s;
+            ">↑ Forward</button>
 
-        <div>
+            <button class="quick-move-btn" data-motion="g1_walk_backward" style="
+              padding: 10px;
+              background: rgba(255, 152, 0, 0.15);
+              color: #ff9800;
+              border: 1px solid rgba(255, 152, 0, 0.3);
+              border-radius: 8px;
+              cursor: pointer;
+              font-size: 12px;
+              font-weight: 600;
+              transition: all 0.2s;
+            ">↓ Back</button>
+
+            <button class="quick-move-btn" data-motion="g1_stand" style="
+              padding: 10px;
+              background: rgba(96, 125, 139, 0.15);
+              color: #90a4ae;
+              border: 1px solid rgba(96, 125, 139, 0.3);
+              border-radius: 8px;
+              cursor: pointer;
+              font-size: 12px;
+              font-weight: 600;
+              transition: all 0.2s;
+            ">Stand</button>
+
+            <button class="quick-move-btn" data-motion="g1_turn_left" style="
+              padding: 10px;
+              background: rgba(33, 150, 243, 0.15);
+              color: #42a5f5;
+              border: 1px solid rgba(33, 150, 243, 0.3);
+              border-radius: 8px;
+              cursor: pointer;
+              font-size: 12px;
+              font-weight: 600;
+              transition: all 0.2s;
+            ">↺ Turn L</button>
+
+            <button class="quick-move-btn" data-motion="g1_turn_right" style="
+              padding: 10px;
+              background: rgba(33, 150, 243, 0.15);
+              color: #42a5f5;
+              border: 1px solid rgba(33, 150, 243, 0.3);
+              border-radius: 8px;
+              cursor: pointer;
+              font-size: 12px;
+              font-weight: 600;
+              transition: all 0.2s;
+            ">↻ Turn R</button>
+
+            <button class="quick-move-btn" data-motion="g1_sidestep_left" style="
+              padding: 10px;
+              background: rgba(229, 57, 53, 0.15);
+              color: #ef5350;
+              border: 1px solid rgba(229, 57, 53, 0.3);
+              border-radius: 8px;
+              cursor: pointer;
+              font-size: 12px;
+              font-weight: 600;
+              transition: all 0.2s;
+            ">← Side L</button>
+
+            <button class="quick-move-btn" data-motion="g1_sidestep_right" style="
+              padding: 10px;
+              background: rgba(229, 57, 53, 0.15);
+              color: #ef5350;
+              border: 1px solid rgba(229, 57, 53, 0.3);
+              border-radius: 8px;
+              cursor: pointer;
+              font-size: 12px;
+              font-weight: 600;
+              transition: all 0.2s;
+            ">→ Side R</button>
+          </div>
+
           <div style="
             display: flex;
-            justify-content: space-between;
-            margin-bottom: 8px;
-            color: var(--text-tertiary);
-            font-size: 11px;
-          ">
-            <span id="csv-current-time">0.0s</span>
-            <span id="csv-duration">0.0s</span>
-          </div>
-
-          <div id="csv-timeline-container" style="
-            position: relative;
-            height: 32px;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
             background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--glass-border);
             border-radius: 8px;
-            cursor: pointer;
-            overflow: hidden;
           ">
-            <div id="csv-timeline-progress" style="
-              position: absolute;
-              left: 0;
-              top: 0;
-              height: 100%;
-              background: var(--accent);
-              width: 0%;
-              transition: width 0.05s linear;
-              opacity: 0.3;
-            "></div>
-            <div id="csv-timeline-handle" style="
-              position: absolute;
-              left: 0;
-              top: 50%;
-              transform: translate(-50%, -50%);
-              width: 14px;
-              height: 14px;
-              background: var(--accent);
-              border: 2px solid white;
-              border-radius: 50%;
-              cursor: grab;
-              box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-            "></div>
+            <label style="
+              color: var(--text-secondary);
+              font-size: 12px;
+              font-weight: 600;
+            ">Repeat:</label>
+            <input
+              type="number"
+              id="quick-move-repeat"
+              min="1"
+              max="10"
+              value="1"
+              style="
+                width: 70px;
+                padding: 8px 10px;
+                background: rgba(255, 255, 255, 0.08);
+                color: var(--text-primary);
+                border: 1px solid var(--glass-border);
+                border-radius: 8px;
+                font-size: 12px;
+                font-weight: 600;
+              "
+            />
+            <span style="
+              color: var(--text-tertiary);
+              font-size: 11px;
+            ">times</span>
           </div>
         </div>
+      </details>
 
-        <div style="display: flex; gap: 12px; align-items: center;">
-          <label style="color: var(--text-secondary); font-size: 11px; font-weight: 500;">Speed:</label>
-          <input
-            type="range"
-            id="csv-speed"
-            min="0.1"
-            max="3"
-            step="0.1"
-            value="1"
-            style="flex: 1; cursor: pointer;"
-          />
-          <span id="csv-speed-value" style="
-            color: var(--text-primary);
-            font-size: 11px;
-            min-width: 38px;
-            font-weight: 500;
-          ">1.0x</span>
-        </div>
+      <div style="
+        padding: 12px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--glass-border);
+        border-radius: 12px;
+        text-align: center;
+        color: var(--text-secondary);
+        font-size: 11px;
+        line-height: 1.5;
+      ">
+        💡 <strong>Tip:</strong> Use the floating control bar at the bottom to play/pause motion with spacebar
       </div>
     `;
 
@@ -343,19 +298,18 @@ export class CSVMotionUI {
       motionInfo: panel.querySelector('#csv-motion-info'),
       sequenceBuilderContainer: panel.querySelector('#csv-sequence-builder-container'),
       quickMoveButtons: panel.querySelectorAll('.quick-move-btn'),
-      quickMoveRepeat: panel.querySelector('#quick-move-repeat'),
-      playbackControls: panel.querySelector('#csv-playback-controls'),
-      playBtn: panel.querySelector('#csv-play-btn'),
-      stopBtn: panel.querySelector('#csv-stop-btn'),
-      loopCheckbox: panel.querySelector('#csv-loop'),
-      currentTime: panel.querySelector('#csv-current-time'),
-      duration: panel.querySelector('#csv-duration'),
-      timeline: panel.querySelector('#csv-timeline-container'),
-      timelineProgress: panel.querySelector('#csv-timeline-progress'),
-      timelineHandle: panel.querySelector('#csv-timeline-handle'),
-      speedSlider: panel.querySelector('#csv-speed'),
-      speedValue: panel.querySelector('#csv-speed-value')
+      quickMoveRepeat: panel.querySelector('#quick-move-repeat')
     };
+
+    const detailsElement = panel.querySelector('details');
+    if (detailsElement) {
+      detailsElement.addEventListener('toggle', (e) => {
+        const arrow = detailsElement.querySelector('summary span');
+        if (arrow) {
+          arrow.style.transform = e.target.open ? 'rotate(90deg)' : 'rotate(0deg)';
+        }
+      });
+    }
 
     if (this.sequenceManager && this.elements.sequenceBuilderContainer) {
       this.sequenceBuilderUI = new SequenceBuilderUI(
@@ -371,20 +325,18 @@ export class CSVMotionUI {
       this.elements.fileInput.click();
     });
 
+    this.elements.loadBtn.addEventListener('mouseenter', () => {
+      this.elements.loadBtn.style.transform = 'translateY(-2px)';
+      this.elements.loadBtn.style.boxShadow = '0 4px 12px rgba(10, 132, 255, 0.4)';
+    });
+
+    this.elements.loadBtn.addEventListener('mouseleave', () => {
+      this.elements.loadBtn.style.transform = 'translateY(0)';
+      this.elements.loadBtn.style.boxShadow = 'none';
+    });
+
     this.elements.fileInput.addEventListener('change', (e) => {
       this.handleFileLoad(e.target.files[0]);
-    });
-
-    this.elements.playBtn.addEventListener('click', () => {
-      this.togglePlayPause();
-    });
-
-    this.elements.stopBtn.addEventListener('click', () => {
-      this.motionController.stop();
-    });
-
-    this.elements.loopCheckbox.addEventListener('change', (e) => {
-      this.motionController.setLoop(e.target.checked);
     });
 
     this.elements.quickMoveButtons.forEach(btn => {
@@ -393,35 +345,16 @@ export class CSVMotionUI {
         const repeatCount = parseInt(this.elements.quickMoveRepeat.value) || 1;
         this.executeQuickMovement(motionFile, repeatCount);
       });
-    });
 
-    this.elements.speedSlider.addEventListener('input', (e) => {
-      const speed = parseFloat(e.target.value);
-      this.motionController.setPlaybackSpeed(speed);
-      this.elements.speedValue.textContent = `${speed.toFixed(1)}x`;
-    });
+      btn.addEventListener('mouseenter', () => {
+        btn.style.transform = 'translateY(-2px)';
+        btn.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
+      });
 
-    this.elements.timeline.addEventListener('mousedown', (e) => {
-      this.isDraggingTimeline = true;
-      this.updateTimelineFromMouse(e);
-    });
-
-    document.addEventListener('mousemove', (e) => {
-      if (this.isDraggingTimeline) {
-        this.updateTimelineFromMouse(e);
-      }
-    });
-
-    document.addEventListener('mouseup', () => {
-      this.isDraggingTimeline = false;
-    });
-
-    this.motionController.on('onFrameChange', (frame) => {
-      this.updateTimeDisplay();
-    });
-
-    this.motionController.on('onPlayStateChange', (isPlaying) => {
-      this.updatePlayButton(isPlaying);
+      btn.addEventListener('mouseleave', () => {
+        btn.style.transform = 'translateY(0)';
+        btn.style.boxShadow = 'none';
+      });
     });
 
     this.motionController.on('onMotionLoad', (motionData) => {
@@ -442,9 +375,6 @@ export class CSVMotionUI {
       const motionData = await CSVMotionLoader.loadFromFile(file, robotType);
       this.motionController.resetAccumulatedTransforms();
       this.motionController.loadMotion(motionData, false);
-
-      this.elements.playbackControls.style.display = 'block';
-      this.updateTimeDisplay();
     } catch (error) {
       console.error('Failed to load CSV motion:', error);
       alert(`Failed to load CSV: ${error.message}`);
@@ -494,53 +424,9 @@ export class CSVMotionUI {
 
   showMotionInfo(motionData) {
     this.elements.motionInfo.style.display = 'block';
-    this.elements.motionInfo.textContent =
-      `${motionData.robotType} • ${motionData.frameCount} frames • ${motionData.duration.toFixed(2)}s @ ${motionData.fps}fps`;
-  }
-
-  togglePlayPause() {
-    if (this.motionController.isPlaying) {
-      this.motionController.pause();
-    } else {
-      this.motionController.play();
-    }
-  }
-
-  updatePlayButton(isPlaying) {
-    this.elements.playBtn.textContent = isPlaying ? '⏸ Pause' : '▶ Play';
-    this.elements.playBtn.style.background = isPlaying ? '#ff9800' : '#4caf50';
-  }
-
-  updateTimeDisplay() {
-    const currentTime = this.motionController.getCurrentTime();
-    const duration = this.motionController.getDuration();
-    const progress = this.motionController.getProgress();
-
-    this.elements.currentTime.textContent = `${currentTime.toFixed(2)}s`;
-    this.elements.duration.textContent = `${duration.toFixed(2)}s`;
-
-    if (!this.isDraggingTimeline) {
-      this.elements.timelineProgress.style.width = `${progress * 100}%`;
-      this.elements.timelineHandle.style.left = `${progress * 100}%`;
-    }
-  }
-
-  updateTimelineFromMouse(e) {
-    const rect = this.elements.timeline.getBoundingClientRect();
-    const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
-    const progress = x / rect.width;
-
-    if (this.motionController.motionData) {
-      const frame = Math.floor(progress * this.motionController.motionData.frameCount);
-      this.motionController.setFrame(frame);
-
-      this.elements.timelineProgress.style.width = `${progress * 100}%`;
-      this.elements.timelineHandle.style.left = `${progress * 100}%`;
-    }
-  }
-
-  update() {
-    this.motionController.update();
+    this.elements.motionInfo.innerHTML = `
+      ✓ Loaded: <strong>${motionData.robotType}</strong> • ${motionData.frameCount} frames • ${motionData.duration.toFixed(1)}s @ ${motionData.fps}fps
+    `;
   }
 
   dispose() {

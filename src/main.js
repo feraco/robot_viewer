@@ -22,6 +22,8 @@ import { MotionSequenceManager } from './controllers/MotionSequenceManager.js';
 import { JointGraphUI } from './ui/JointGraphUI.js';
 import { i18n } from './utils/i18n.js';
 import { SampleLoader } from './loaders/SampleLoader.js';
+import { WelcomeModal } from './ui/WelcomeModal.js';
+import { FloatingMotionControls } from './ui/FloatingMotionControls.js';
 
 // Expose d3 globally for PanelManager
 window.d3 = d3;
@@ -46,9 +48,11 @@ class App {
         this.motionControlsUI = null;
         this.csvMotionController = null;
         this.csvMotionUI = null;
+        this.floatingMotionControls = null;
         this.sequenceManager = null;
         this.jointGraphUI = null;
         this.sampleLoader = null;
+        this.welcomeModal = null;
         this.currentModel = null;
         this.currentMJCFFile = null;
         this.currentMJCFModel = null;
@@ -225,8 +229,19 @@ class App {
             this.sampleLoader = new SampleLoader(this.fileHandler, null);
             this.sampleLoader.initializeSampleSelectors();
 
-            // Preload G1 29DOF model by default
-            await this.sampleLoader.loadSampleModel(0);
+            // Initialize welcome modal
+            this.welcomeModal = new WelcomeModal(this.sampleLoader, this.fileHandler);
+
+            // Check if this is first visit
+            const hasShownWelcome = localStorage.getItem('welcomeModalShown') === 'true';
+
+            if (!hasShownWelcome) {
+                // Show welcome modal on first visit
+                setTimeout(() => this.welcomeModal.show(), 500);
+            } else {
+                // Preload G1 29DOF model by default on subsequent visits
+                await this.sampleLoader.loadSampleModel(0);
+            }
 
             // Start render loop
             this.animate();
@@ -492,6 +507,11 @@ class App {
                 this.csvMotionUI = new CSVMotionUI(csvMotionContainer, this.csvMotionController, this.sequenceManager);
             }
 
+            // Initialize floating motion controls if not exists
+            if (!this.floatingMotionControls) {
+                this.floatingMotionControls = new FloatingMotionControls(this.csvMotionController);
+            }
+
             // Update sample loader with CSV motion controller and UI references
             if (this.sampleLoader) {
                 this.sampleLoader.csvMotionController = this.csvMotionController;
@@ -701,6 +721,9 @@ class App {
         const floatingPanel = document.getElementById('floating-joint-graph-panel');
 
         if (toggleBtn && floatingPanel) {
+            floatingPanel.style.display = 'flex';
+            toggleBtn.classList.add('active');
+
             toggleBtn.addEventListener('click', () => {
                 const isVisible = floatingPanel.style.display === 'flex';
                 if (isVisible) {
