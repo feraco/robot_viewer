@@ -1,4 +1,7 @@
 import { ROBOT_CONFIGS } from '../loaders/CSVMotionLoader.js';
+import { CSVMotionLoader } from '../loaders/CSVMotionLoader.js';
+import { PKLMotionLoader } from '../loaders/PKLMotionLoader.js';
+import { NPZMotionLoader } from '../loaders/NPZMotionLoader.js';
 import { SequenceBuilderUI } from './SequenceBuilderUI.js';
 import { MotionPresetLibrary } from '../models/MotionPresetLibrary.js';
 
@@ -374,13 +377,10 @@ export class CSVMotionUI {
       let motionData;
 
       if (fileExt === 'csv') {
-        const { CSVMotionLoader } = await import('../loaders/CSVMotionLoader.js');
         motionData = await CSVMotionLoader.loadFromFile(file, robotType);
       } else if (fileExt === 'pkl') {
-        const { PKLMotionLoader } = await import('../loaders/PKLMotionLoader.js');
         motionData = await PKLMotionLoader.loadFromFile(file, robotType);
       } else if (fileExt === 'npz') {
-        const { NPZMotionLoader } = await import('../loaders/NPZMotionLoader.js');
         motionData = await NPZMotionLoader.loadFromFile(file, robotType);
       } else {
         throw new Error(`Unsupported file format: ${fileExt}`);
@@ -396,8 +396,6 @@ export class CSVMotionUI {
 
   async executeQuickMovement(motionFile, repeatCount) {
     try {
-      const { CSVMotionLoader } = await import('../loaders/CSVMotionLoader.js');
-
       const response = await fetch(`/${motionFile}.csv`);
       if (!response.ok) {
         throw new Error(`Failed to load motion file: ${motionFile}.csv`);
