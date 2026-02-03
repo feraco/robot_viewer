@@ -97,3 +97,22 @@ export function normalizePath(path) {
     return path.replace(/\\/g, '/').replace(/^\/+/, '').replace(/\/+/g, '/');
 }
 
+/**
+ * Get motion file type from extension
+ */
+export function getMotionFileType(ext) {
+    const typeMap = {
+        'csv': 'csv',
+        'pkl': 'pkl',
+        'npz': 'npz'
+    };
+    return typeMap[ext] || null;
+}
+
+/**
+ * Check if file is a motion file
+ */
+export function isMotionFile(ext) {
+    return ['csv', 'pkl', 'npz'].includes(ext.toLowerCase());
+}
+

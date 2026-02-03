@@ -52,13 +52,13 @@ export class CSVMotionUI {
           margin-bottom: 12px;
           line-height: 1.4;
         ">
-          Import CSV motion files to animate your robot
+          Import motion files (CSV, PKL, NPZ) to animate your robot
         </div>
         <div style="display: flex; gap: 8px;">
           <input
             type="file"
             id="csv-motion-file"
-            accept=".csv"
+            accept=".csv,.pkl,.npz"
             style="display: none;"
           />
           <button
@@ -76,7 +76,7 @@ export class CSVMotionUI {
               transition: all 0.2s;
             "
           >
-            Choose CSV File
+            Choose Motion File
           </button>
 
           <select
@@ -366,18 +366,31 @@ export class CSVMotionUI {
     if (!file) return;
 
     try {
-      const { CSVMotionLoader } = await import('../loaders/CSVMotionLoader.js');
-
+      const fileExt = file.name.split('.').pop().toLowerCase();
       const robotType = this.elements.robotType.value === 'auto'
         ? null
         : this.elements.robotType.value;
 
-      const motionData = await CSVMotionLoader.loadFromFile(file, robotType);
+      let motionData;
+
+      if (fileExt === 'csv') {
+        const { CSVMotionLoader } = await import('../loaders/CSVMotionLoader.js');
+        motionData = await CSVMotionLoader.loadFromFile(file, robotType);
+      } else if (fileExt === 'pkl') {
+        const { PKLMotionLoader } = await import('../loaders/PKLMotionLoader.js');
+        motionData = await PKLMotionLoader.loadFromFile(file, robotType);
+      } else if (fileExt === 'npz') {
+        const { NPZMotionLoader } = await import('../loaders/NPZMotionLoader.js');
+        motionData = await NPZMotionLoader.loadFromFile(file, robotType);
+      } else {
+        throw new Error(`Unsupported file format: ${fileExt}`);
+      }
+
       this.motionController.resetAccumulatedTransforms();
       this.motionController.loadMotion(motionData, false);
     } catch (error) {
-      console.error('Failed to load CSV motion:', error);
-      alert(`Failed to load CSV: ${error.message}`);
+      console.error('Failed to load motion file:', error);
+      alert(`Failed to load motion file: ${error.message}`);
     }
   }
 
