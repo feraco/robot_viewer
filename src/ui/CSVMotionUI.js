@@ -1,7 +1,4 @@
 import { ROBOT_CONFIGS } from '../loaders/CSVMotionLoader.js';
-import { CSVMotionLoader } from '../loaders/CSVMotionLoader.js';
-import { PKLMotionLoader } from '../loaders/PKLMotionLoader.js';
-import { NPZMotionLoader } from '../loaders/NPZMotionLoader.js';
 import { SequenceBuilderUI } from './SequenceBuilderUI.js';
 import { MotionPresetLibrary } from '../models/MotionPresetLibrary.js';
 
@@ -377,13 +374,12 @@ export class CSVMotionUI {
       let motionData;
 
       if (fileExt === 'csv') {
+        const { CSVMotionLoader } = await import('../loaders/CSVMotionLoader.js');
         motionData = await CSVMotionLoader.loadFromFile(file, robotType);
-      } else if (fileExt === 'pkl') {
-        motionData = await PKLMotionLoader.loadFromFile(file, robotType);
-      } else if (fileExt === 'npz') {
-        motionData = await NPZMotionLoader.loadFromFile(file, robotType);
+      } else if (fileExt === 'pkl' || fileExt === 'npz') {
+        throw new Error(`${fileExt.toUpperCase()} files require server-side processing and are not supported in the browser version. Please use CSV format.`);
       } else {
-        throw new Error(`Unsupported file format: ${fileExt}`);
+        throw new Error(`Unsupported file format: ${fileExt}. Please use CSV format.`);
       }
 
       this.motionController.resetAccumulatedTransforms();

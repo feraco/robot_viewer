@@ -128,7 +128,6 @@ export default defineConfig({
     chunkSizeWarningLimit: 1000
   },
   optimizeDeps: {
-    include: ['pickleparser', 'npyz'],
     exclude: ['urdf-loader'],
     force: true
   },
