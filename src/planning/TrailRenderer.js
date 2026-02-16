@@ -31,13 +31,14 @@ export class TrailRenderer {
     if (now - this._lastSampleTime < this.sampleInterval) return;
     this._lastSampleTime = now;
 
-    const pos = robotModel.threeObject.position;
+    const worldPos = new THREE.Vector3();
+    robotModel.threeObject.getWorldPosition(worldPos);
     const t = (now - this._startTime) / 1000;
 
     this.trailPoints.push({
-      x: pos.x,
-      y: pos.y,
-      z: pos.z,
+      x: worldPos.x,
+      y: worldPos.y,
+      z: worldPos.z,
       t
     });
 

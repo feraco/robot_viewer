@@ -439,17 +439,33 @@ export class DeploymentPanelUI {
     }
 
     let startX = 0, startY = 0, startYaw = 0;
+    let worldMatrixInverse = null;
+
     if (this.robotModel && this.robotModel.threeObject) {
       const pos = this.robotModel.threeObject.position;
       startX = pos.x;
-      startY = pos.z;
+      startY = pos.y;
 
       const forward = new THREE.Vector3(1, 0, 0);
       forward.applyQuaternion(this.robotModel.threeObject.quaternion);
-      startYaw = Math.atan2(forward.z, forward.x);
+      startYaw = Math.atan2(forward.y, forward.x);
+
+      const parent = this.robotModel.threeObject.parent;
+      if (parent) {
+        parent.updateMatrixWorld(true);
+        worldMatrixInverse = parent.matrixWorld.clone().invert();
+      }
     }
 
-    const allWaypoints = [{ x: startX, y: 0, z: startY }, ...waypoints];
+    const localWaypoints = waypoints.map(wp => {
+      const v = new THREE.Vector3(wp.x, wp.y, wp.z);
+      if (worldMatrixInverse) {
+        v.applyMatrix4(worldMatrixInverse);
+      }
+      return { x: v.x, z: v.y };
+    });
+
+    const allWaypoints = [{ x: startX, z: startY }, ...localWaypoints];
     this.compiledResult = this.pathCompiler.compile(allWaypoints, { x: startX, y: startY }, startYaw);
 
     if (this.compiledResult.error) {
@@ -501,8 +517,31 @@ export class DeploymentPanelUI {
       this.elements.progressBar.style.width = `${Math.min(overallProgress * 100, 100)}%`;
     };
 
-    this.csvMotionController.resetAccumulatedTransforms();
+    this._initializeStartTransforms();
     this.sequenceManager.playSequence(this.compiledResult.commands, false);
+  }
+
+  _initializeStartTransforms() {
+    this.csvMotionController.resetAccumulatedTransforms();
+    this.csvMotionController.motionData = null;
+
+    const firstCmd = this.compiledResult.commands[0];
+    const firstMotion = this.sequenceManager.preloadedMotions.get(firstCmd.motionId);
+
+    if (!this.robotModel?.threeObject || !firstMotion?.frames[0]) return;
+
+    const robotPos = this.robotModel.threeObject.position.clone();
+    const robotRot = this.robotModel.threeObject.quaternion.clone();
+
+    const f0 = firstMotion.frames[0];
+    const frame0Pos = new THREE.Vector3(f0.root.position.x, f0.root.position.y, f0.root.position.z);
+    const frame0Rot = new THREE.Quaternion(f0.root.quaternion.x, f0.root.quaternion.y, f0.root.quaternion.z, f0.root.quaternion.w);
+
+    const invFrame0Rot = frame0Rot.clone().invert();
+    this.csvMotionController.accumulatedRotation.copy(robotRot.clone().multiply(invFrame0Rot));
+
+    const rotatedFrame0Pos = frame0Pos.clone().applyQuaternion(this.csvMotionController.accumulatedRotation);
+    this.csvMotionController.accumulatedPosition.copy(robotPos.clone().sub(rotatedFrame0Pos));
   }
 
   _abort() {
