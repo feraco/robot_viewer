@@ -40,34 +40,41 @@ export class SampleLoader {
     });
   }
 
+  async loadSample(path) {
+    const url = path.startsWith('/') ? `.${path}` : path;
+    const type = path.endsWith('.xml') ? 'xml' : path.split('.').pop();
+    const name = path.split('/').pop().replace(/\.[^.]+$/, '');
+    await this._loadModelFromUrl(url, name, type);
+  }
+
   async loadSampleModel(index) {
     const sample = SAMPLE_MODELS[index];
     if (!sample) return;
+    await this._loadModelFromUrl(sample.url, sample.name, sample.type);
+  }
 
+  async _loadModelFromUrl(url, name, type) {
     try {
-      const response = await fetch(sample.url);
+      const response = await fetch(url);
       if (!response.ok) {
         throw new Error(`HTTP error ${response.status}`);
       }
 
       const content = await response.text();
-      const fileName = sample.name.replace(/\s+/g, '_') + '.' + sample.type;
+      const fileName = name.replace(/\s+/g, '_') + '.' + type;
 
       const file = new File([content], fileName, {
         type: 'text/xml'
       });
 
-      // Store the base URL for remote mesh loading (for MJCF files)
-      const baseUrl = sample.url.substring(0, sample.url.lastIndexOf('/') + 1);
+      const baseUrl = url.substring(0, url.lastIndexOf('/') + 1);
       file.userData = {
         baseUrl: baseUrl
       };
 
-      // Add file to fileMap before loading
       this.fileHandler.fileMap.set(fileName, file);
 
-      // If MJCF file, also load all mesh files
-      if (sample.type === 'xml') {
+      if (type === 'xml') {
         await this.loadMeshFiles(content, baseUrl);
       }
 
