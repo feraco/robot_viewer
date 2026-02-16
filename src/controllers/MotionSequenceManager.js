@@ -17,6 +17,7 @@ export class MotionSequenceManager {
     this.commandStartTime = 0;
     this.currentCommand = null;
     this.commandElapsedTime = 0;
+    this._completingCommand = false;
 
     this.setupControllerCallbacks();
   }
@@ -162,6 +163,7 @@ export class MotionSequenceManager {
 
     this.commandStartTime = performance.now();
     this.commandElapsedTime = 0;
+    this._completingCommand = false;
 
     this.controller.loadMotion(motionData);
     this.controller.setLoop(false);
@@ -201,13 +203,15 @@ export class MotionSequenceManager {
 
       if (this.commandElapsedTime >= targetDuration) {
         clearInterval(checkInterval);
+        this.controller.pause();
         this.handleCommandComplete();
       }
     }, 50);
   }
 
   handleCommandComplete() {
-    if (!this.isPlayingSequence) return;
+    if (!this.isPlayingSequence || this._completingCommand) return;
+    this._completingCommand = true;
 
     if (this.currentCommand && this.currentCommand.transitionDelay > 0) {
       setTimeout(() => {

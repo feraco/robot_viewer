@@ -30,11 +30,17 @@ export class PathCompiler {
       return { commands: [], segments: [], error: 'Calibration values too small' };
     }
 
+    const turnLeftLocal = turnLeftCal.localDisplacement || { forward: 0, sideways: 0 };
+    const turnRightLocal = turnRightCal.localDisplacement || { forward: 0, sideways: 0 };
+    const walkDuration = walkForwardCal.duration;
+
     for (let i = 1; i < waypoints.length; i++) {
-      const target = waypoints[i];
-      const dx = target.x - currentX;
-      const dy = target.z !== undefined ? target.z - currentY : target.y - currentY;
-      const distance = Math.sqrt(dx * dx + dy * dy);
+      const targetX = waypoints[i].x;
+      const targetY = waypoints[i].z !== undefined ? waypoints[i].z : waypoints[i].y;
+
+      let dx = targetX - currentX;
+      let dy = targetY - currentY;
+      const initialDistance = Math.sqrt(dx * dx + dy * dy);
       const targetYaw = Math.atan2(dy, dx);
 
       let yawDiff = targetYaw - currentYaw;
@@ -43,8 +49,8 @@ export class PathCompiler {
 
       const segment = {
         from: { x: currentX, y: currentY },
-        to: { x: target.x, y: target.z !== undefined ? target.z : target.y },
-        distance,
+        to: { x: targetX, y: targetY },
+        distance: initialDistance,
         yawDiff,
         turnCommands: [],
         walkCommands: []
@@ -59,7 +65,14 @@ export class PathCompiler {
           });
           commands.push(cmd);
           segment.turnCommands.push({ motionId: 'turn_left', repeats });
-          currentYaw += turnLeftYaw * repeats;
+
+          for (let r = 0; r < repeats; r++) {
+            const cosY = Math.cos(currentYaw);
+            const sinY = Math.sin(currentYaw);
+            currentX += turnLeftLocal.forward * cosY - turnLeftLocal.sideways * sinY;
+            currentY += turnLeftLocal.forward * sinY + turnLeftLocal.sideways * cosY;
+            currentYaw += turnLeftYaw;
+          }
         } else {
           const repeats = Math.max(1, Math.round(Math.abs(yawDiff) / turnRightYaw));
           const cmd = new MotionCommand({
@@ -68,21 +81,48 @@ export class PathCompiler {
           });
           commands.push(cmd);
           segment.turnCommands.push({ motionId: 'turn_right', repeats });
-          currentYaw -= turnRightYaw * repeats;
+
+          for (let r = 0; r < repeats; r++) {
+            const cosY = Math.cos(currentYaw);
+            const sinY = Math.sin(currentYaw);
+            currentX += turnRightLocal.forward * cosY - turnRightLocal.sideways * sinY;
+            currentY += turnRightLocal.forward * sinY + turnRightLocal.sideways * cosY;
+            currentYaw -= turnRightYaw;
+          }
         }
       }
 
-      if (distance > 0.05) {
-        const repeats = Math.max(1, Math.round(distance / walkDistance));
-        const cmd = new MotionCommand({
-          motionId: 'walk_forward',
-          repeatCount: repeats
-        });
-        commands.push(cmd);
-        segment.walkCommands.push({ motionId: 'walk_forward', repeats });
+      dx = targetX - currentX;
+      dy = targetY - currentY;
+      const remainingDistance = Math.sqrt(dx * dx + dy * dy);
 
-        currentX += Math.cos(currentYaw) * walkDistance * repeats;
-        currentY += Math.sin(currentYaw) * walkDistance * repeats;
+      if (remainingDistance > 0.05) {
+        const exactRepeats = remainingDistance / walkDistance;
+        const fullRepeats = Math.floor(exactRepeats);
+        const fractional = exactRepeats - fullRepeats;
+
+        if (fullRepeats > 0) {
+          const cmd = new MotionCommand({
+            motionId: 'walk_forward',
+            repeatCount: fullRepeats
+          });
+          commands.push(cmd);
+          segment.walkCommands.push({ motionId: 'walk_forward', repeats: fullRepeats });
+        }
+
+        if (fractional > 0.1 && walkDuration > 0) {
+          const partialDuration = fractional * walkDuration;
+          const cmd = new MotionCommand({
+            motionId: 'walk_forward',
+            repeatCount: 1,
+            duration: partialDuration
+          });
+          commands.push(cmd);
+          segment.walkCommands.push({ motionId: 'walk_forward', repeats: 1, partial: true, duration: partialDuration });
+        }
+
+        currentX += Math.cos(currentYaw) * remainingDistance;
+        currentY += Math.sin(currentYaw) * remainingDistance;
       }
 
       segments.push(segment);
@@ -103,7 +143,8 @@ export class PathCompiler {
       for (let r = 0; r < cmd.repeatCount; r++) {
         flat.push(new MotionCommand({
           motionId: cmd.motionId,
-          repeatCount: 1
+          repeatCount: 1,
+          duration: cmd.duration
         }));
       }
     }
@@ -115,7 +156,8 @@ export class PathCompiler {
     for (const cmd of commands) {
       const cal = this.calibrator.getCalibration(cmd.motionId);
       if (cal) {
-        total += cal.duration * cmd.repeatCount;
+        const cmdDuration = cmd.duration !== null ? cmd.duration : cal.duration;
+        total += cmdDuration * cmd.repeatCount;
       }
     }
     return total;

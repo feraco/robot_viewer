@@ -26,8 +26,8 @@ export class CSVMotionController {
 
   loadMotion(motionData, preserveState = true) {
     if (this.motionData && preserveState && motionData.frames[0]) {
-      const lastFrameIndex = this.motionData.frameCount - 1;
-      const lastFrame = this.motionData.frames[lastFrameIndex];
+      const chainFrameIndex = Math.min(Math.floor(this.currentFrame), this.motionData.frameCount - 1);
+      const lastFrame = this.motionData.frames[chainFrameIndex];
 
       if (lastFrame) {
         const lastLocalPos = new THREE.Vector3(

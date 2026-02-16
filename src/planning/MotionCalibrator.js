@@ -42,9 +42,13 @@ export class MotionCalibrator {
     const euler = new THREE.Euler().setFromQuaternion(relativeRot, 'ZYX');
     const yawChange = euler.z;
 
+    const invStartRot = startRot.clone().invert();
+    const localDisp = displacement.clone().applyQuaternion(invStartRot);
+
     const calibration = {
       motionId,
       displacement: { x: displacement.x, y: displacement.y, z: displacement.z },
+      localDisplacement: { forward: localDisp.x, sideways: localDisp.y },
       forwardDistance,
       yawChange,
       duration: motionData.duration,
