@@ -332,6 +332,19 @@ export class DeploymentPanelUI {
                 transition: all 0.2s;
               ">Load Plan</button>
             </div>
+            <button id="deploy-recompile-btn" style="
+              width: 100%;
+              padding: 8px 12px;
+              background: rgba(255, 152, 0, 0.12);
+              color: #ff9800;
+              border: 1px solid rgba(255, 152, 0, 0.3);
+              border-radius: 6px;
+              cursor: pointer;
+              font-size: 11px;
+              font-weight: 600;
+              transition: all 0.2s;
+              display: none;
+            ">Recompile for Current Position</button>
           </div>
         </div>
       </div>
@@ -356,6 +369,7 @@ export class DeploymentPanelUI {
       planName: this.container.querySelector('#deploy-plan-name'),
       saveBtn: this.container.querySelector('#deploy-save-btn'),
       loadBtn: this.container.querySelector('#deploy-load-btn'),
+      recompileBtn: this.container.querySelector('#deploy-recompile-btn'),
       closeBtn: this.container.querySelector('#deploy-close-btn')
     };
   }
@@ -381,6 +395,7 @@ export class DeploymentPanelUI {
       this.compiledResult = null;
       this.elements.compileSummary.style.display = 'none';
       this.elements.resultsSection.style.display = 'none';
+      this.elements.recompileBtn.style.display = 'none';
       this._setDeployEnabled(false);
     });
 
@@ -389,6 +404,10 @@ export class DeploymentPanelUI {
     this.elements.abortBtn.addEventListener('click', () => this._abort());
     this.elements.saveBtn.addEventListener('click', () => this._savePlan());
     this.elements.loadBtn.addEventListener('click', () => this._loadPlan());
+    this.elements.recompileBtn.addEventListener('click', () => {
+      this._compile();
+      this.elements.recompileBtn.style.display = 'none';
+    });
 
     this.waypointManager.onWaypointsChanged = (waypoints) => {
       this._updateWaypointList(waypoints);
@@ -660,12 +679,26 @@ export class DeploymentPanelUI {
         return;
       }
 
-      const name = prompt(
-        'Saved plans:\n\n' +
-        plans.map((p, i) => `${i + 1}. ${p.name} (${p.waypoints.length} waypoints)`).join('\n') +
-        '\n\nEnter plan name to load:'
-      );
+      const templates = plans.filter(p => p.is_template);
+      const userPlans = plans.filter(p => !p.is_template);
 
+      let listing = '';
+      if (templates.length > 0) {
+        listing += '-- Template Missions --\n';
+        templates.forEach(p => {
+          const desc = p.description ? ` - ${p.description}` : '';
+          listing += `  ${p.name} (${p.waypoints.length} wp, ~${(p.estimated_duration || 0).toFixed(0)}s)${desc}\n`;
+        });
+      }
+      if (userPlans.length > 0) {
+        if (listing) listing += '\n';
+        listing += '-- Saved Plans --\n';
+        userPlans.forEach(p => {
+          listing += `  ${p.name} (${p.waypoints.length} wp)\n`;
+        });
+      }
+
+      const name = prompt(listing + '\nEnter plan name to load:');
       if (!name) return;
 
       const plan = plans.find(p => p.name === name);
@@ -684,9 +717,14 @@ export class DeploymentPanelUI {
           segments: [],
           estimatedDuration: plan.estimated_duration
         };
-        this.elements.compileSummary.textContent = `Loaded: ${plan.compiled_commands.length} commands, ~${plan.estimated_duration.toFixed(1)}s`;
+        const label = plan.is_template ? 'Template' : 'Loaded';
+        this.elements.compileSummary.textContent = `${label}: ${plan.compiled_commands.length} commands, ~${plan.estimated_duration.toFixed(1)}s`;
         this.elements.compileSummary.style.display = 'block';
         this._setDeployEnabled(true);
+
+        if (plan.is_template) {
+          this.elements.recompileBtn.style.display = 'block';
+        }
       }
     } catch (error) {
       alert('Failed to load: ' + error.message);

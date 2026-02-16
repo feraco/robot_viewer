@@ -300,6 +300,7 @@ class App {
         this.pathCompiler = new PathCompiler(this.motionCalibrator);
         this.trailRenderer = new TrailRenderer(this.sceneManager);
         this.deploymentPersistence = new DeploymentPersistence();
+        this.deploymentPersistence.seedDefaultMissions();
 
         this.deploymentPanel = new DeploymentPanelUI({
             waypointManager: this.waypointManager,

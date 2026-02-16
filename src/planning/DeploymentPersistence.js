@@ -1,3 +1,5 @@
+import { getDefaultMissions } from './MissionDatasets.js';
+
 export class DeploymentPersistence {
   constructor() {
     this._supabase = null;
@@ -14,16 +16,20 @@ export class DeploymentPersistence {
     return this._supabase;
   }
 
-  async savePlan(name, waypoints, compiledCommands, estimatedDuration) {
+  async savePlan(name, waypoints, compiledCommands, estimatedDuration, options = {}) {
     const supabase = await this._getClient();
+    const row = {
+      name,
+      waypoints,
+      compiled_commands: compiledCommands.map(c => c.toJSON ? c.toJSON() : c),
+      estimated_duration: estimatedDuration
+    };
+    if (options.is_template) row.is_template = true;
+    if (options.description) row.description = options.description;
+
     const { data, error } = await supabase
       .from('deployment_plans')
-      .insert({
-        name,
-        waypoints,
-        compiled_commands: compiledCommands.map(c => c.toJSON ? c.toJSON() : c),
-        estimated_duration: estimatedDuration
-      })
+      .insert(row)
       .select()
       .maybeSingle();
 
@@ -80,5 +86,34 @@ export class DeploymentPersistence {
 
     if (error) throw error;
     return data || [];
+  }
+
+  async seedDefaultMissions() {
+    const supabase = await this._getClient();
+    const { data: existing } = await supabase
+      .from('deployment_plans')
+      .select('id')
+      .eq('is_template', true)
+      .limit(1);
+
+    if (existing && existing.length > 0) return;
+
+    const missions = getDefaultMissions();
+    const rows = missions.map(m => ({
+      name: m.name,
+      description: m.description,
+      waypoints: m.waypoints,
+      compiled_commands: m.compiled_commands,
+      estimated_duration: m.estimated_duration,
+      is_template: true
+    }));
+
+    const { error } = await supabase
+      .from('deployment_plans')
+      .insert(rows);
+
+    if (error) {
+      console.warn('Failed to seed default missions:', error.message);
+    }
   }
 }
