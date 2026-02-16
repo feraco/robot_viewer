@@ -24,6 +24,12 @@ import { i18n } from './utils/i18n.js';
 import { SampleLoader } from './loaders/SampleLoader.js';
 import { WelcomeModal } from './ui/WelcomeModal.js';
 import { FloatingMotionControls } from './ui/FloatingMotionControls.js';
+import { MotionCalibrator } from './planning/MotionCalibrator.js';
+import { WaypointManager } from './planning/WaypointManager.js';
+import { PathCompiler } from './planning/PathCompiler.js';
+import { TrailRenderer } from './planning/TrailRenderer.js';
+import { DeploymentPanelUI } from './planning/DeploymentPanelUI.js';
+import { DeploymentPersistence } from './planning/DeploymentPersistence.js';
 
 // Expose d3 globally for PanelManager
 window.d3 = d3;
@@ -57,6 +63,12 @@ class App {
         this.currentMJCFFile = null;
         this.currentMJCFModel = null;
         this.angleUnit = 'rad';
+        this.motionCalibrator = null;
+        this.waypointManager = null;
+        this.pathCompiler = null;
+        this.trailRenderer = null;
+        this.deploymentPanel = null;
+        this.deploymentPersistence = null;
     }
 
     /**
@@ -261,6 +273,8 @@ class App {
             await this.sequenceManager.preloadDefaultMotions('G1');
             console.log('CSV motions preloaded successfully');
 
+            this.initPlanningSystem();
+
             const standMotion = this.sequenceManager.preloadedMotions.get('stand');
             if (standMotion && this.csvMotionController) {
                 this.csvMotionController.loadMotion(standMotion, false);
@@ -272,6 +286,45 @@ class App {
             }
         } catch (error) {
             console.warn('Failed to preload CSV motions:', error);
+        }
+    }
+
+    initPlanningSystem() {
+        if (!this.sceneManager || !this.sequenceManager || !this.csvMotionController) return;
+        if (this.deploymentPanel) return;
+
+        this.motionCalibrator = new MotionCalibrator();
+        this.motionCalibrator.calibrateAll(this.sequenceManager.preloadedMotions);
+
+        this.waypointManager = new WaypointManager(this.sceneManager);
+        this.pathCompiler = new PathCompiler(this.motionCalibrator);
+        this.trailRenderer = new TrailRenderer(this.sceneManager);
+        this.deploymentPersistence = new DeploymentPersistence();
+
+        this.deploymentPanel = new DeploymentPanelUI({
+            waypointManager: this.waypointManager,
+            pathCompiler: this.pathCompiler,
+            trailRenderer: this.trailRenderer,
+            sequenceManager: this.sequenceManager,
+            calibrator: this.motionCalibrator,
+            persistence: this.deploymentPersistence,
+            csvMotionController: this.csvMotionController
+        });
+
+        if (this.currentModel) {
+            this.deploymentPanel.setRobotModel(this.currentModel);
+        }
+
+        this.setupDeployPanelToggle();
+    }
+
+    setupDeployPanelToggle() {
+        const toggleBtn = document.getElementById('toggle-deploy-panel');
+        if (toggleBtn && this.deploymentPanel) {
+            toggleBtn.addEventListener('click', () => {
+                this.deploymentPanel.toggle();
+                toggleBtn.classList.toggle('active', this.deploymentPanel.isVisible());
+            });
         }
     }
 
@@ -526,6 +579,10 @@ class App {
             if (this.sampleLoader) {
                 this.sampleLoader.csvMotionController = this.csvMotionController;
                 this.sampleLoader.csvMotionUI = this.csvMotionUI;
+            }
+
+            if (this.deploymentPanel) {
+                this.deploymentPanel.setRobotModel(model);
             }
 
             // Initialize joint graph UI if not exists
@@ -1089,6 +1146,10 @@ class App {
             // Update CSV motion playback
             if (this.csvMotionController && this.csvMotionController.isPlaying) {
                 this.csvMotionController.update();
+            }
+
+            if (this.trailRenderer && this.trailRenderer.isRecording && this.currentModel) {
+                this.trailRenderer.samplePosition(this.currentModel);
             }
 
             this.sceneManager.render();
