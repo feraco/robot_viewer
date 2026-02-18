@@ -265,8 +265,13 @@ export class PanelManager {
         this.registerPanel('floating-help-panel');
         this.registerPanel('code-editor-panel', '.code-editor-header');
 
-        // Setup all maximize buttons (common functionality)
+        setTimeout(() => {
+            this.registerPanel('floating-motion-gallery-panel');
+            this.registerPanel('motionUploadPanel');
+        }, 100);
+
         this.setupMaximizeButtons();
+        this.setupMinimizeButtons();
     }
 
     /**
@@ -274,11 +279,9 @@ export class PanelManager {
      * Automatically find all buttons with panel-maximize-btn class and bind events
      */
     setupMaximizeButtons() {
-        // Find all maximize buttons
         const maximizeButtons = document.querySelectorAll('.panel-maximize-btn');
 
         maximizeButtons.forEach(button => {
-            // Get panel ID from data-panel-id attribute
             const panelId = button.getAttribute('data-panel-id');
 
             if (!panelId) {
@@ -290,33 +293,70 @@ export class PanelManager {
                 return;
             }
 
-            // Bind click event
             button.addEventListener('click', () => {
                 const isCurrentlyMaximized = panel.classList.contains('maximized');
 
                 if (isCurrentlyMaximized) {
-                    // Restore original size
                     panel.classList.remove('maximized');
                     button.textContent = '⛶';
 
-                    // If model structure graph, restore original view
                     if (panelId === 'floating-model-tree' && this.modelGraphView) {
                         setTimeout(() => {
                             this.restoreModelGraphView();
                         }, 450);
                     }
                 } else {
-                    // Maximize
                     panel.classList.add('maximized');
                     button.textContent = '❐';
 
-                    // If model structure graph, save current view and adjust
                     if (panelId === 'floating-model-tree' && this.modelGraphView) {
                         this.saveModelGraphTransform();
                         setTimeout(() => {
                             this.modelGraphView.fitToView(true, 600);
                         }, 450);
                     }
+                }
+            });
+        });
+    }
+
+    /**
+     * Setup minimize buttons (collapse/expand functionality)
+     * Automatically find all buttons with panel-minimize-btn class and bind events
+     */
+    setupMinimizeButtons() {
+        const minimizeButtons = document.querySelectorAll('.panel-minimize-btn');
+
+        minimizeButtons.forEach(button => {
+            const panelId = button.getAttribute('data-panel-id');
+
+            if (!panelId) {
+                return;
+            }
+
+            const panel = document.getElementById(panelId);
+            if (!panel) {
+                return;
+            }
+
+            const content = panel.querySelector('.floating-panel-content, .code-editor-content');
+            if (!content) {
+                return;
+            }
+
+            button.addEventListener('click', () => {
+                const isMinimized = panel.classList.contains('minimized');
+
+                if (isMinimized) {
+                    panel.classList.remove('minimized');
+                    content.style.display = '';
+                    button.textContent = '−';
+                    button.title = 'Minimize';
+                } else {
+                    panel.classList.add('minimized');
+                    content.style.display = 'none';
+                    button.textContent = '□';
+                    button.title = 'Expand';
                 }
             });
         });

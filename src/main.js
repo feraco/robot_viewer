@@ -30,6 +30,8 @@ import { PathCompiler } from './planning/PathCompiler.js';
 import { TrailRenderer } from './planning/TrailRenderer.js';
 import { DeploymentPanelUI } from './planning/DeploymentPanelUI.js';
 import { DeploymentPersistence } from './planning/DeploymentPersistence.js';
+import { MotionUploadUI } from './ui/MotionUploadUI.js';
+import { MotionLibraryGalleryUI } from './ui/MotionLibraryGalleryUI.js';
 
 // Expose d3 globally for PanelManager
 window.d3 = d3;
@@ -69,6 +71,8 @@ class App {
         this.trailRenderer = null;
         this.deploymentPanel = null;
         this.deploymentPersistence = null;
+        this.motionUploadUI = null;
+        this.motionLibraryGalleryUI = null;
     }
 
     /**
@@ -244,6 +248,13 @@ class App {
             // Initialize welcome modal
             this.welcomeModal = new WelcomeModal(this.sampleLoader, this.fileHandler);
 
+            // Initialize motion library UIs
+            this.motionUploadUI = new MotionUploadUI();
+            this.motionLibraryGalleryUI = new MotionLibraryGalleryUI(this.csvMotionController);
+
+            // Setup motion library panel toggles
+            this.setupMotionLibraryToggles();
+
             // Check if this is first visit
             const hasShownWelcome = localStorage.getItem('welcomeModalShown') === 'true';
 
@@ -325,6 +336,25 @@ class App {
             toggleBtn.addEventListener('click', () => {
                 this.deploymentPanel.toggle();
                 toggleBtn.classList.toggle('active', this.deploymentPanel.isVisible());
+            });
+        }
+    }
+
+    setupMotionLibraryToggles() {
+        const uploadBtn = document.getElementById('toggle-motion-upload');
+        const galleryBtn = document.getElementById('toggle-motion-gallery');
+
+        if (uploadBtn && this.motionUploadUI) {
+            uploadBtn.addEventListener('click', () => {
+                this.motionUploadUI.toggle();
+                uploadBtn.classList.toggle('active', this.motionUploadUI.container?.style.display === 'block');
+            });
+        }
+
+        if (galleryBtn && this.motionLibraryGalleryUI) {
+            galleryBtn.addEventListener('click', () => {
+                this.motionLibraryGalleryUI.toggle();
+                galleryBtn.classList.toggle('active', this.motionLibraryGalleryUI.container?.style.display === 'flex');
             });
         }
     }
