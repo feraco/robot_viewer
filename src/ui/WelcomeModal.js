@@ -21,7 +21,7 @@ export class WelcomeModal {
       height: 100%;
       background: rgba(0, 0, 0, 0.8);
       backdrop-filter: blur(8px);
-      z-index: 10000;
+      z-index: var(--z-modal);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -57,73 +57,35 @@ export class WelcomeModal {
         color: var(--text-secondary);
         text-align: center;
         line-height: 1.5;
-      ">Get started by loading a sample robot model or uploading your own URDF, MJCF, or USD file.</p>
-
-      <div id="sample-models-grid" style="
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 16px;
-        margin-bottom: 24px;
-      "></div>
-
-      <div style="
-        display: flex;
-        gap: 12px;
-        margin-bottom: 20px;
-      ">
-        <button id="welcome-upload-btn" style="
-          flex: 1;
-          padding: 16px 24px;
-          background: var(--accent);
-          color: white;
-          border: none;
-          border-radius: 12px;
-          font-size: 16px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.2s;
-        ">Upload Your Files</button>
-
-        <button id="welcome-browse-samples" style="
-          flex: 1;
-          padding: 16px 24px;
-          background: rgba(255, 255, 255, 0.08);
-          color: var(--text-primary);
-          border: 1px solid var(--glass-border);
-          border-radius: 12px;
-          font-size: 16px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.2s;
-        ">Browse All Samples</button>
-      </div>
+      ">A powerful tool for visualizing and animating robot models. Start with a guided tour or explore on your own.</p>
 
       <button id="welcome-take-tour" style="
         width: 100%;
-        padding: 14px;
-        background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+        padding: 18px;
+        background: linear-gradient(135deg, #0a84ff 0%, #409cff 100%);
         color: white;
         border: none;
-        border-radius: 8px;
-        font-size: 15px;
+        border-radius: 12px;
+        font-size: 17px;
         font-weight: 600;
         cursor: pointer;
         transition: all 0.2s;
-        margin-bottom: 12px;
-        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-      ">Take a Guided Tour 🎯</button>
+        margin-bottom: 16px;
+        box-shadow: 0 4px 16px rgba(10, 132, 255, 0.3);
+      ">Take a Guided Tour</button>
 
       <button id="welcome-skip-btn" style="
         width: 100%;
-        padding: 12px;
-        background: transparent;
-        color: var(--text-tertiary);
-        border: none;
-        border-radius: 8px;
-        font-size: 14px;
+        padding: 14px;
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--text-primary);
+        border: 1px solid var(--glass-border);
+        border-radius: 12px;
+        font-size: 15px;
+        font-weight: 500;
         cursor: pointer;
         transition: all 0.2s;
-      ">Skip - Start with empty scene</button>
+      ">Skip and Explore</button>
     `;
 
     this.modal.appendChild(content);
@@ -134,71 +96,10 @@ export class WelcomeModal {
       content.style.transform = 'scale(1)';
     }, 10);
 
-    this.populateSampleModels(content);
     this.setupEventListeners(content);
   }
 
-  populateSampleModels(content) {
-    const grid = content.querySelector('#sample-models-grid');
-    const featuredSamples = [
-      { name: 'G1 Robot (23 DOF)', path: 'g1/scene_23dof.xml' },
-      { name: 'G1 Robot (29 DOF)', path: 'g1/scene_29dof.xml' }
-    ];
-
-    featuredSamples.forEach(sample => {
-      const card = document.createElement('button');
-      card.style.cssText = `
-        padding: 20px;
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid var(--glass-border);
-        border-radius: 12px;
-        cursor: pointer;
-        transition: all 0.2s;
-        text-align: center;
-      `;
-
-      card.innerHTML = `
-        <div style="color: var(--text-primary); font-size: 14px; font-weight: 600;">${sample.name}</div>
-      `;
-
-      card.addEventListener('mouseenter', () => {
-        card.style.transform = 'translateY(-4px)';
-        card.style.background = 'rgba(255, 255, 255, 0.1)';
-        card.style.borderColor = 'var(--accent)';
-        card.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.2)';
-      });
-
-      card.addEventListener('mouseleave', () => {
-        card.style.transform = 'translateY(0)';
-        card.style.background = 'rgba(255, 255, 255, 0.05)';
-        card.style.borderColor = 'var(--glass-border)';
-        card.style.boxShadow = 'none';
-      });
-
-      card.addEventListener('click', async () => {
-        await this.loadSample(sample.path);
-        this.close();
-      });
-
-      grid.appendChild(card);
-    });
-  }
-
   setupEventListeners(content) {
-    content.querySelector('#welcome-upload-btn').addEventListener('click', () => {
-      this.fileHandler.triggerFileUpload();
-      this.close();
-    });
-
-    content.querySelector('#welcome-browse-samples').addEventListener('click', () => {
-      const samplesSelect = document.getElementById('sample-models-select');
-      if (samplesSelect) {
-        samplesSelect.focus();
-        samplesSelect.click();
-      }
-      this.close();
-    });
-
     content.querySelector('#welcome-take-tour').addEventListener('click', () => {
       this.shouldStartTour = true;
       this.close();
@@ -207,11 +108,19 @@ export class WelcomeModal {
     const takeTourBtn = content.querySelector('#welcome-take-tour');
     takeTourBtn.addEventListener('mouseenter', (e) => {
       e.target.style.transform = 'translateY(-2px)';
-      e.target.style.boxShadow = '0 6px 16px rgba(59, 130, 246, 0.4)';
+      e.target.style.boxShadow = '0 6px 20px rgba(10, 132, 255, 0.4)';
     });
     takeTourBtn.addEventListener('mouseleave', (e) => {
       e.target.style.transform = 'translateY(0)';
-      e.target.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.3)';
+      e.target.style.boxShadow = '0 4px 16px rgba(10, 132, 255, 0.3)';
+    });
+
+    const skipBtn = content.querySelector('#welcome-skip-btn');
+    skipBtn.addEventListener('mouseenter', (e) => {
+      e.target.style.background = 'rgba(255, 255, 255, 0.12)';
+    });
+    skipBtn.addEventListener('mouseleave', (e) => {
+      e.target.style.background = 'rgba(255, 255, 255, 0.08)';
     });
 
     content.querySelector('#welcome-skip-btn').addEventListener('click', () => {

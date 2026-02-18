@@ -29,7 +29,7 @@ export class MotionControlsUI {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       min-width: 300px;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-      z-index: 1000;
+      z-index: var(--z-motion-controls);
       display: block;
     `;
 

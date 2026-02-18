@@ -46,7 +46,7 @@ export class DeploymentPanelUI {
       display: none;
       flex-direction: column;
       overflow: hidden;
-      z-index: 60;
+      z-index: var(--z-deployment-panel);
       animation: slideIn 0.4s var(--spring);
     `;
 

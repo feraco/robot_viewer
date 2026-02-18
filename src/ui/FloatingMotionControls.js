@@ -18,7 +18,7 @@ export class FloatingMotionControls {
       bottom: 30px;
       left: 50%;
       transform: translateX(-50%) translateY(150px);
-      z-index: 500;
+      z-index: var(--z-floating-controls);
       display: flex;
       align-items: center;
       gap: 12px;

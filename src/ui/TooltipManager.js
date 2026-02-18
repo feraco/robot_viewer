@@ -22,7 +22,7 @@ export class TooltipManager {
       border-radius: 8px;
       padding: 16px;
       max-width: 320px;
-      z-index: 10001;
+      z-index: var(--z-tooltip);
       display: none;
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
       pointer-events: none;

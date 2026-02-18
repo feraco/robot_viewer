@@ -24,7 +24,7 @@ export class MotionUploadUI {
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
       backdrop-filter: blur(10px);
       overflow-y: auto;
-      z-index: 1000;
+      z-index: var(--z-motion-library);
       display: none;
     `;
 

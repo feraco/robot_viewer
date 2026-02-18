@@ -28,7 +28,7 @@ export class GuidedTourManager {
       height: 100%;
       background: rgba(0, 0, 0, 0.75);
       backdrop-filter: blur(4px);
-      z-index: 9998;
+      z-index: var(--z-guided-tour-overlay);
       display: none;
       transition: opacity 0.3s ease;
       opacity: 0;
@@ -42,7 +42,7 @@ export class GuidedTourManager {
       border-radius: 8px;
       box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.75), 0 0 20px rgba(96, 165, 250, 0.5);
       pointer-events: none;
-      z-index: 9999;
+      z-index: var(--z-guided-tour-highlight);
       display: none;
       transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     `;
@@ -57,7 +57,7 @@ export class GuidedTourManager {
       border-radius: 12px;
       padding: 24px;
       max-width: 400px;
-      z-index: 10000;
+      z-index: var(--z-guided-tour-tooltip);
       display: none;
       box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
       transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);

@@ -31,42 +31,43 @@ export class MotionLibraryGalleryUI {
       right: 20px;
       width: 400px;
       height: 600px;
-      background: rgba(30, 30, 30, 0.95);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 12px;
-      color: white;
+      background: var(--glass-bg);
+      backdrop-filter: blur(var(--blur-amount)) saturate(var(--saturation));
+      -webkit-backdrop-filter: blur(var(--blur-amount)) saturate(var(--saturation));
+      border: 0.5px solid var(--glass-border);
+      border-radius: 16px;
+      color: var(--text-primary);
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-      backdrop-filter: blur(10px);
+      box-shadow: var(--glass-shadow);
       display: none;
       flex-direction: column;
       overflow: hidden;
-      z-index: 100;
+      z-index: var(--z-motion-library);
     `;
 
     panel.innerHTML = `
       <div class="floating-panel-header" style="
         padding: 15px 20px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        border-bottom: 0.5px solid var(--glass-border);
         cursor: move;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        background: rgba(40, 40, 40, 0.8);
+        background: rgba(255, 255, 255, 0.05);
       ">
         <div>
-          <h3 style="margin: 0; font-size: 16px; font-weight: 600;">Motion Library</h3>
-          <p id="motionLibrarySubtitle" style="margin: 4px 0 0 0; font-size: 11px; color: #999;">Loading...</p>
+          <h3 style="margin: 0; font-size: 16px; font-weight: 600; color: var(--text-primary);">Motion Library</h3>
+          <p id="motionLibrarySubtitle" style="margin: 4px 0 0 0; font-size: 11px; color: var(--text-tertiary);">Loading...</p>
         </div>
         <div style="display: flex; gap: 8px;">
           <button class="panel-minimize-btn" data-panel-id="floating-motion-gallery-panel"
-            style="background: transparent; border: none; color: white; cursor: pointer;
+            style="background: transparent; border: none; color: var(--text-primary); cursor: pointer;
             font-size: 18px; padding: 0 5px; line-height: 1;" title="Minimize">−</button>
           <button class="panel-maximize-btn" data-panel-id="floating-motion-gallery-panel"
-            style="background: transparent; border: none; color: white; cursor: pointer;
+            style="background: transparent; border: none; color: var(--text-primary); cursor: pointer;
             font-size: 16px; padding: 0 5px; line-height: 1;" title="Maximize">⛶</button>
           <button id="closeMotionGallery" style="background: transparent; border: none;
-            color: white; cursor: pointer; font-size: 20px; padding: 0 5px;
+            color: var(--text-primary); cursor: pointer; font-size: 20px; padding: 0 5px;
             line-height: 1;">×</button>
         </div>
       </div>
@@ -77,14 +78,14 @@ export class MotionLibraryGalleryUI {
         flex: 1;
         overflow: hidden;
       ">
-        <div style="padding: 15px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
+        <div style="padding: 15px 20px; border-bottom: 0.5px solid var(--glass-border);">
           <input type="text" id="motionSearchInput" placeholder="Search motions..." style="
             width: 100%;
             padding: 8px 12px;
             background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 6px;
-            color: white;
+            border: 0.5px solid var(--glass-border);
+            border-radius: 8px;
+            color: var(--text-primary);
             font-size: 13px;
             margin-bottom: 10px;
           ">
@@ -92,9 +93,9 @@ export class MotionLibraryGalleryUI {
           <div style="display: flex; gap: 6px; flex-wrap: wrap;">
             <button class="category-filter-btn" data-category="all" style="
               padding: 6px 12px;
-              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-              border: 1px solid rgba(255, 255, 255, 0.2);
-              border-radius: 6px;
+              background: var(--accent);
+              border: 0.5px solid var(--glass-border);
+              border-radius: 8px;
               color: white;
               font-size: 12px;
               cursor: pointer;
@@ -103,9 +104,9 @@ export class MotionLibraryGalleryUI {
             <button class="category-filter-btn" data-category="walking" style="
               padding: 6px 12px;
               background: rgba(255, 255, 255, 0.05);
-              border: 1px solid rgba(255, 255, 255, 0.1);
-              border-radius: 6px;
-              color: white;
+              border: 0.5px solid var(--glass-border);
+              border-radius: 8px;
+              color: var(--text-primary);
               font-size: 12px;
               cursor: pointer;
               transition: all 0.2s;
@@ -113,9 +114,9 @@ export class MotionLibraryGalleryUI {
             <button class="category-filter-btn" data-category="sports" style="
               padding: 6px 12px;
               background: rgba(255, 255, 255, 0.05);
-              border: 1px solid rgba(255, 255, 255, 0.1);
-              border-radius: 6px;
-              color: white;
+              border: 0.5px solid var(--glass-border);
+              border-radius: 8px;
+              color: var(--text-primary);
               font-size: 12px;
               cursor: pointer;
               transition: all 0.2s;
@@ -123,9 +124,9 @@ export class MotionLibraryGalleryUI {
             <button class="category-filter-btn" data-category="dance" style="
               padding: 6px 12px;
               background: rgba(255, 255, 255, 0.05);
-              border: 1px solid rgba(255, 255, 255, 0.1);
-              border-radius: 6px;
-              color: white;
+              border: 0.5px solid var(--glass-border);
+              border-radius: 8px;
+              color: var(--text-primary);
               font-size: 12px;
               cursor: pointer;
               transition: all 0.2s;
@@ -133,9 +134,9 @@ export class MotionLibraryGalleryUI {
             <button class="category-filter-btn" data-category="combat" style="
               padding: 6px 12px;
               background: rgba(255, 255, 255, 0.05);
-              border: 1px solid rgba(255, 255, 255, 0.1);
-              border-radius: 6px;
-              color: white;
+              border: 0.5px solid var(--glass-border);
+              border-radius: 8px;
+              color: var(--text-primary);
               font-size: 12px;
               cursor: pointer;
               transition: all 0.2s;
@@ -208,11 +209,11 @@ export class MotionLibraryGalleryUI {
 
         categoryButtons.forEach(b => {
           if (b === btn) {
-            b.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-            b.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+            b.style.background = 'var(--accent)';
+            b.style.color = 'white';
           } else {
             b.style.background = 'rgba(255, 255, 255, 0.05)';
-            b.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+            b.style.color = 'var(--text-primary)';
           }
         });
 
@@ -386,13 +387,13 @@ export class MotionLibraryGalleryUI {
           background-image: url('${motion.thumbnail_url}');
           background-size: cover;
           background-position: center;
-          border-radius: 6px;
+          border-radius: 8px;
           margin-bottom: 10px;
         "></div>
       ` : ''}
 
         <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 6px;">
-          <h4 style="margin: 0; font-size: 14px; font-weight: 600;">${this.escapeHtml(motion.name)}</h4>
+          <h4 style="margin: 0; font-size: 14px; font-weight: 600; color: var(--text-primary);">${this.escapeHtml(motion.name)}</h4>
           ${motion.is_featured ? '<span style="color: #fbbf24; font-size: 16px;">★</span>' : ''}
         </div>
 
@@ -400,7 +401,7 @@ export class MotionLibraryGalleryUI {
           <p style="
             margin: 0 0 8px 0;
             font-size: 12px;
-            color: #aaa;
+            color: var(--text-tertiary);
             line-height: 1.4;
             display: -webkit-box;
             -webkit-line-clamp: 2;
@@ -412,23 +413,23 @@ export class MotionLibraryGalleryUI {
         <div style="display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap;">
           <span style="
             padding: 3px 8px;
-            background: rgba(102, 126, 234, 0.2);
-            border-radius: 4px;
+            background: var(--accent-secondary);
+            border-radius: 6px;
             font-size: 11px;
-            color: #a5b4fc;
+            color: var(--accent);
           ">${this.escapeHtml(motion.category)}</span>
           ${difficulty ? `
             <span style="
               padding: 3px 8px;
               background: rgba(${this.hexToRgb(difficultyColor)}, 0.2);
-              border-radius: 4px;
+              border-radius: 6px;
               font-size: 11px;
               color: ${difficultyColor};
             ">${difficulty}</span>
           ` : ''}
         </div>
 
-      <div style="display: flex; justify-content: space-between; font-size: 11px; color: #666;">
+      <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-tertiary);">
         <span>${duration}</span>
         <span>${frames} frames</span>
       </div>
@@ -492,7 +493,7 @@ export class MotionLibraryGalleryUI {
       color: white;
       border-radius: 8px;
       font-size: 14px;
-      z-index: 10000;
+      z-index: var(--z-notification);
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     `;
     notification.textContent = message;

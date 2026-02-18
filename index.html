@@ -39,6 +39,21 @@
             --blur-amount: 24px;
             --saturation: 180%;
             --spring: cubic-bezier(0.4, 0, 0.2, 1);
+
+            /* Z-index system - consistent layering */
+            --z-base: 1;
+            --z-panels: 50;
+            --z-deployment-panel: 60;
+            --z-floating-controls: 500;
+            --z-code-editor: 999;
+            --z-motion-library: 1000;
+            --z-motion-controls: 1000;
+            --z-guided-tour-overlay: 9998;
+            --z-guided-tour-highlight: 9999;
+            --z-guided-tour-tooltip: 10000;
+            --z-modal: 10000;
+            --z-tooltip: 10001;
+            --z-notification: 10002;
         }
 
         [data-theme="light"] {
