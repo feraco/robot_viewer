@@ -455,6 +455,55 @@ export class SceneManager {
     }
 
     /**
+     * Position camera in front of robot for optimal viewing
+     * Useful when loading new motion datasets
+     */
+    positionCameraInFrontOfRobot() {
+        const model = this.currentModel;
+        if (!model || !model.threeObject) {
+            return;
+        }
+
+        // Force update world matrix
+        if (this.world) {
+            this.world.updateMatrixWorld(true);
+        }
+        model.threeObject.updateMatrixWorld(true);
+
+        // Calculate bounding box
+        const bboxGlobal = new THREE.Box3();
+        bboxGlobal.setFromObject(model.threeObject, true);
+
+        if (bboxGlobal.isEmpty()) {
+            return;
+        }
+
+        const center = bboxGlobal.getCenter(new THREE.Vector3());
+        const size = bboxGlobal.getSize(new THREE.Vector3());
+        const maxDim = Math.max(size.x, size.y, size.z);
+
+        // Calculate camera distance
+        const fov = this.camera.fov * (Math.PI / 180);
+        const distance = maxDim / (2 * Math.tan(fov / 2)) * 2.5;
+
+        // Position camera directly in front (facing robot)
+        // In global coordinates: looking from positive Y direction (front)
+        const cameraPosition = new THREE.Vector3(
+            center.x,
+            center.y + distance,  // Front of robot
+            center.z + distance * 0.3  // Slightly elevated
+        );
+
+        this.camera.position.copy(cameraPosition);
+        this.controls.target.copy(center);
+
+        this.controls.update();
+        this.camera.updateProjectionMatrix();
+
+        this.redraw();
+    }
+
+    /**
      * Set coordinate system up direction
      */
     setUp(up) {

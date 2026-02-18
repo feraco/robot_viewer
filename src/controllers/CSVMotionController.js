@@ -104,6 +104,14 @@ export class CSVMotionController {
 
     this.trigger('onMotionLoad', motionData);
     this.applyFrame(0);
+
+    // Position camera in front of robot for optimal viewing
+    if (this.sceneManager && typeof this.sceneManager.positionCameraInFrontOfRobot === 'function') {
+      // Delay slightly to ensure frame has been applied
+      requestAnimationFrame(() => {
+        this.sceneManager.positionCameraInFrontOfRobot();
+      });
+    }
   }
 
   play() {
