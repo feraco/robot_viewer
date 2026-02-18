@@ -1,7 +1,7 @@
 import { supabase, isSupabaseEnabled } from '../utils/SupabaseClient.js';
 
 export class MotionLibraryService {
-  static async uploadMotionFile(file, userId) {
+  static async uploadMotionFile(file, userId = 'public') {
     if (!isSupabaseEnabled()) {
       throw new Error('Supabase is not configured');
     }
@@ -22,7 +22,7 @@ export class MotionLibraryService {
     return urlData.publicUrl;
   }
 
-  static async uploadThumbnail(file, userId) {
+  static async uploadThumbnail(file, userId = 'public') {
     if (!isSupabaseEnabled()) {
       throw new Error('Supabase is not configured');
     }

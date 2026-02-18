@@ -32,12 +32,16 @@ import { DeploymentPanelUI } from './planning/DeploymentPanelUI.js';
 import { DeploymentPersistence } from './planning/DeploymentPersistence.js';
 import { MotionUploadUI } from './ui/MotionUploadUI.js';
 import { MotionLibraryGalleryUI } from './ui/MotionLibraryGalleryUI.js';
+import { BulkMotionImporter } from './utils/BulkMotionImporter.js';
 
 // Expose d3 globally for PanelManager
 window.d3 = d3;
 
 // Expose i18n globally
 window.i18n = i18n;
+
+// Expose BulkMotionImporter for console usage
+window.BulkMotionImporter = BulkMotionImporter;
 
 // Application state
 class App {

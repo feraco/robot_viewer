@@ -4,24 +4,6 @@ import { supabase, isSupabaseEnabled } from '../utils/SupabaseClient.js';
 export class MotionUploadUI {
   constructor() {
     this.container = null;
-    this.currentUser = null;
-    this.setupAuthListener();
-  }
-
-  async setupAuthListener() {
-    if (!isSupabaseEnabled()) return;
-
-    const { data: { session } } = await supabase.auth.getSession();
-    this.currentUser = session?.user || null;
-
-    supabase.auth.onAuthStateChange((event, session) => {
-      (async () => {
-        this.currentUser = session?.user || null;
-        if (this.container) {
-          this.render();
-        }
-      })();
-    });
   }
 
   createUploadPanel() {
@@ -65,33 +47,6 @@ export class MotionUploadUI {
           </p>
         </div>
       `;
-      return;
-    }
-
-    if (!this.currentUser) {
-      this.container.innerHTML = `
-        <div style="text-align: center; padding: 20px;">
-          <h3 style="margin: 0 0 10px 0;">Sign In Required</h3>
-          <p style="color: #999; font-size: 14px; margin-bottom: 20px;">
-            You need to be signed in to upload motions to the library.
-          </p>
-          <button id="signInBtn" style="
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
-          ">Sign In / Sign Up</button>
-        </div>
-      `;
-
-      const signInBtn = this.container.querySelector('#signInBtn');
-      if (signInBtn) {
-        signInBtn.addEventListener('click', () => this.showAuthModal());
-      }
       return;
     }
 
@@ -302,12 +257,12 @@ export class MotionUploadUI {
       const csvText = await csvFile.text();
       const metadata = await MotionLibraryService.parseCSVMetadata(csvText);
 
-      const fileUrl = await MotionLibraryService.uploadMotionFile(csvFile, this.currentUser.id);
+      const fileUrl = await MotionLibraryService.uploadMotionFile(csvFile, 'public');
 
       let thumbnailUrl = null;
       if (thumbnailFile) {
         this.showStatus('Uploading thumbnail...', 'info');
-        thumbnailUrl = await MotionLibraryService.uploadThumbnail(thumbnailFile, this.currentUser.id);
+        thumbnailUrl = await MotionLibraryService.uploadThumbnail(thumbnailFile, 'public');
       }
 
       this.showStatus('Creating database entry...', 'info');
@@ -323,7 +278,7 @@ export class MotionUploadUI {
         description,
         tags,
         frame_count: metadata.frameCount,
-        created_by: this.currentUser.id
+        created_by: null
       };
 
       await MotionLibraryService.createMotionEntry(motionData);
@@ -362,10 +317,6 @@ export class MotionUploadUI {
     statusDiv.style.border = `1px solid ${color.border}`;
     statusDiv.style.color = color.text;
     statusDiv.textContent = message;
-  }
-
-  showAuthModal() {
-    alert('Authentication UI would be shown here. For now, please implement Supabase Auth in your application.');
   }
 
   show() {
