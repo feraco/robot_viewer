@@ -9,35 +9,22 @@ export class SampleLoader {
 
   initializeSampleSelectors() {
     const modelsSelect = document.getElementById('sample-models-select');
-    const motionsSelect = document.getElementById('sample-motions-select');
 
-    SAMPLE_MODELS.forEach((model, index) => {
-      const option = document.createElement('option');
-      option.value = index;
-      option.textContent = model.name;
-      modelsSelect.appendChild(option);
-    });
+    if (modelsSelect) {
+      SAMPLE_MODELS.forEach((model, index) => {
+        const option = document.createElement('option');
+        option.value = index;
+        option.textContent = model.name;
+        modelsSelect.appendChild(option);
+      });
 
-    SAMPLE_MOTIONS.forEach((motion, index) => {
-      const option = document.createElement('option');
-      option.value = index;
-      option.textContent = `${motion.name} (${motion.robotType})`;
-      motionsSelect.appendChild(option);
-    });
-
-    modelsSelect.addEventListener('change', (e) => {
-      if (e.target.value !== '') {
-        this.loadSampleModel(parseInt(e.target.value));
-        e.target.value = '';
-      }
-    });
-
-    motionsSelect.addEventListener('change', (e) => {
-      if (e.target.value !== '') {
-        this.loadSampleMotion(parseInt(e.target.value));
-        e.target.value = '';
-      }
-    });
+      modelsSelect.addEventListener('change', (e) => {
+        if (e.target.value !== '') {
+          this.loadSampleModel(parseInt(e.target.value));
+          e.target.value = '';
+        }
+      });
+    }
   }
 
   async loadSample(path) {

@@ -397,15 +397,15 @@ class App {
             // Setup help button to restart tour
             this.setupHelpButton();
 
+            // Load G1 29DOF model by default
+            await this.sampleLoader.loadSampleModel(0);
+
             // Check if this is first visit
             const hasShownWelcome = localStorage.getItem('welcomeModalShown') === 'true';
 
             if (!hasShownWelcome) {
                 // Show welcome modal on first visit
                 setTimeout(() => this.welcomeModal.show(), 500);
-            } else {
-                // Preload G1 29DOF model by default on subsequent visits
-                await this.sampleLoader.loadSampleModel(0);
             }
 
             // Start render loop
