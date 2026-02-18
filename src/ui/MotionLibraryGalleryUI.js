@@ -438,11 +438,25 @@ export class MotionLibraryGalleryUI {
   async loadMotion(motion) {
     console.log('Loading motion:', motion.name);
     console.log('Motion controller:', this.motionController);
+    console.log('Motion file URL:', motion.file_url);
 
     try {
-      const proxyUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fetch-motion?url=${encodeURIComponent(motion.file_url)}`;
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      console.log('Supabase URL:', supabaseUrl);
+
+      if (!supabaseUrl) {
+        throw new Error('VITE_SUPABASE_URL not configured');
+      }
+
+      const proxyUrl = `${supabaseUrl}/functions/v1/fetch-motion?url=${encodeURIComponent(motion.file_url)}`;
+      console.log('Fetching from proxy:', proxyUrl);
       const response = await fetch(proxyUrl);
-      if (!response.ok) throw new Error('Failed to fetch motion file');
+      console.log('Response status:', response.status, response.statusText);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Error response:', errorText);
+        throw new Error(`Failed to fetch motion file: ${response.status} ${errorText}`);
+      }
 
       const csvText = await response.text();
       console.log('CSV loaded, length:', csvText.length);
