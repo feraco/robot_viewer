@@ -440,7 +440,8 @@ export class MotionLibraryGalleryUI {
     console.log('Motion controller:', this.motionController);
 
     try {
-      const response = await fetch(motion.file_url);
+      const proxyUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fetch-motion?url=${encodeURIComponent(motion.file_url)}`;
+      const response = await fetch(proxyUrl);
       if (!response.ok) throw new Error('Failed to fetch motion file');
 
       const csvText = await response.text();
