@@ -201,6 +201,8 @@ export class MotionLibraryGalleryUI {
 
     try {
       this.motions = await MotionLibraryService.getAllMotions();
+      console.log('Loaded motions:', this.motions.length);
+      console.log('Categories:', [...new Set(this.motions.map(m => m.category))]);
       this.filterMotions();
     } catch (error) {
       console.error('Failed to load motions:', error);
@@ -213,6 +215,7 @@ export class MotionLibraryGalleryUI {
 
     if (this.selectedCategory !== 'all') {
       filtered = filtered.filter(m => m.category === this.selectedCategory);
+      console.log(`Filtering by category "${this.selectedCategory}": ${filtered.length} motions`);
     }
 
     if (this.searchQuery) {
@@ -224,6 +227,7 @@ export class MotionLibraryGalleryUI {
     }
 
     this.filteredMotions = filtered;
+    console.log('Filtered motions:', this.filteredMotions.length);
     this.render();
   }
 
@@ -332,15 +336,23 @@ export class MotionLibraryGalleryUI {
   }
 
   async loadMotion(motion) {
+    console.log('Loading motion:', motion.name);
+    console.log('Motion controller:', this.motionController);
+
     try {
       const response = await fetch(motion.file_url);
       if (!response.ok) throw new Error('Failed to fetch motion file');
 
       const csvText = await response.text();
+      console.log('CSV loaded, length:', csvText.length);
 
       if (this.motionController) {
         const motionData = CSVMotionLoader.parseCSV(csvText, 'G1');
+        console.log('Motion data parsed:', motionData);
         this.motionController.loadMotion(motionData, false);
+        console.log('Motion loaded to controller');
+      } else {
+        throw new Error('Motion controller not available');
       }
 
       this.showNotification(`Loaded: ${motion.name}`, 'success');
