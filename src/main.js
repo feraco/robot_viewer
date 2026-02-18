@@ -737,6 +737,11 @@ class App {
                 this.sampleLoader.csvMotionUI = this.csvMotionUI;
             }
 
+            // Update motion library gallery UI with motion controller reference
+            if (this.motionLibraryGalleryUI) {
+                this.motionLibraryGalleryUI.motionController = this.csvMotionController;
+            }
+
             if (this.deploymentPanel) {
                 this.deploymentPanel.setRobotModel(model);
             }
