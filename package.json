@@ -1,6 +1,33 @@
 {
+  "name": "robot-viewer",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
   "dependencies": {
+    "@babel/runtime": "^7.28.6",
     "@supabase/supabase-js": "^2.97.0",
-    "dotenv": "^17.3.1"
+    "dotenv": "^17.3.1",
+    "mujoco-js": "^0.0.7",
+    "urdf-loader": "^0.12.6"
+  },
+  "devDependencies": {
+    "@codemirror/autocomplete": "^6.20.0",
+    "@codemirror/commands": "^6.10.2",
+    "@codemirror/lang-xml": "^6.1.0",
+    "@codemirror/search": "^6.6.0",
+    "@codemirror/state": "^6.5.4",
+    "@codemirror/view": "^6.39.14",
+    "@uiw/codemirror-theme-dracula": "^4.25.4",
+    "@uiw/codemirror-theme-github": "^4.25.4",
+    "@uiw/codemirror-theme-vscode": "^4.25.4",
+    "codemirror": "^6.0.2",
+    "d3": "^7.9.0",
+    "terser": "^5.46.0",
+    "three": "^0.183.0",
+    "vite": "^7.3.1"
   }
 }
