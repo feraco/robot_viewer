@@ -10,6 +10,8 @@ export class MotionLibraryGalleryUI {
     this.filteredMotions = [];
     this.selectedCategory = 'all';
     this.searchQuery = '';
+    this.intersectionObserver = null;
+    this.renderedCards = new Set();
     this.setupEventListeners();
   }
 
@@ -153,10 +155,33 @@ export class MotionLibraryGalleryUI {
     this.container = panel;
     document.body.appendChild(panel);
 
+    this.setupIntersectionObserver();
     this.bindEventHandlers();
     await this.loadMotions();
 
     return panel;
+  }
+
+  setupIntersectionObserver() {
+    const options = {
+      root: this.container?.querySelector('#motionGalleryGrid'),
+      rootMargin: '50px',
+      threshold: 0.01
+    };
+
+    this.intersectionObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const card = entry.target;
+          const index = parseInt(card.dataset.motionIndex);
+
+          if (!this.renderedCards.has(index)) {
+            this.renderMotionCard(card, this.filteredMotions[index]);
+            this.renderedCards.add(index);
+          }
+        }
+      });
+    }, options);
   }
 
   bindEventHandlers() {
@@ -227,6 +252,7 @@ export class MotionLibraryGalleryUI {
     }
 
     this.filteredMotions = filtered;
+    this.renderedCards.clear();
     console.log('Filtered motions:', this.filteredMotions.length);
     this.render();
   }
@@ -247,12 +273,60 @@ export class MotionLibraryGalleryUI {
       return;
     }
 
-    grid.innerHTML = this.filteredMotions.map(motion => this.createMotionCard(motion)).join('');
+    grid.innerHTML = this.filteredMotions.map((motion, index) => this.createSkeletonCard(index)).join('');
 
-    grid.querySelectorAll('.motion-card').forEach((card, index) => {
-      card.addEventListener('click', () => {
-        this.loadMotion(this.filteredMotions[index]);
-      });
+    const cards = grid.querySelectorAll('.motion-card-skeleton');
+    cards.forEach(card => {
+      this.intersectionObserver.observe(card);
+    });
+  }
+
+  createSkeletonCard(index) {
+    return `
+      <div class="motion-card-skeleton" data-motion-index="${index}" style="
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 10px;
+        min-height: 120px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      ">
+        <div style="
+          width: 40px;
+          height: 40px;
+          border: 3px solid rgba(255, 255, 255, 0.1);
+          border-top-color: #667eea;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+        "></div>
+      </div>
+    `;
+  }
+
+  renderMotionCard(container, motion) {
+    if (!motion) return;
+
+    container.innerHTML = this.createMotionCard(motion);
+    container.classList.remove('motion-card-skeleton');
+    container.classList.add('motion-card');
+    container.style.cursor = 'pointer';
+    container.style.transition = 'all 0.2s';
+
+    container.addEventListener('click', () => {
+      this.loadMotion(motion);
+    });
+
+    container.addEventListener('mouseenter', () => {
+      container.style.background = 'rgba(255, 255, 255, 0.1)';
+      container.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+    });
+
+    container.addEventListener('mouseleave', () => {
+      container.style.background = 'rgba(255, 255, 255, 0.05)';
+      container.style.borderColor = 'rgba(255, 255, 255, 0.1)';
     });
   }
 
@@ -268,27 +342,17 @@ export class MotionLibraryGalleryUI {
     const difficultyColor = difficultyColors[difficulty] || '#999';
 
     return `
-      <div class="motion-card" style="
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 8px;
-        padding: 12px;
-        margin-bottom: 10px;
-        cursor: pointer;
-        transition: all 0.2s;
-      " onmouseover="this.style.background='rgba(255, 255, 255, 0.1)'; this.style.borderColor='rgba(255, 255, 255, 0.2)'"
-         onmouseout="this.style.background='rgba(255, 255, 255, 0.05)'; this.style.borderColor='rgba(255, 255, 255, 0.1)'">
-        ${motion.thumbnail_url ? `
-          <div style="
-            width: 100%;
-            height: 120px;
-            background-image: url('${motion.thumbnail_url}');
-            background-size: cover;
-            background-position: center;
-            border-radius: 6px;
-            margin-bottom: 10px;
-          "></div>
-        ` : ''}
+      ${motion.thumbnail_url ? `
+        <div style="
+          width: 100%;
+          height: 120px;
+          background-image: url('${motion.thumbnail_url}');
+          background-size: cover;
+          background-position: center;
+          border-radius: 6px;
+          margin-bottom: 10px;
+        "></div>
+      ` : ''}
 
         <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 6px;">
           <h4 style="margin: 0; font-size: 14px; font-weight: 600;">${this.escapeHtml(motion.name)}</h4>
@@ -327,10 +391,9 @@ export class MotionLibraryGalleryUI {
           ` : ''}
         </div>
 
-        <div style="display: flex; justify-content: space-between; font-size: 11px; color: #666;">
-          <span>${duration}</span>
-          <span>${frames} frames</span>
-        </div>
+      <div style="display: flex; justify-content: space-between; font-size: 11px; color: #666;">
+        <span>${duration}</span>
+        <span>${frames} frames</span>
       </div>
     `;
   }

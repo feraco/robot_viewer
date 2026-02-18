@@ -33,6 +33,9 @@ import { DeploymentPersistence } from './planning/DeploymentPersistence.js';
 import { MotionUploadUI } from './ui/MotionUploadUI.js';
 import { MotionLibraryGalleryUI } from './ui/MotionLibraryGalleryUI.js';
 import { BulkMotionImporter } from './utils/BulkMotionImporter.js';
+import { GuidedTourManager } from './ui/GuidedTourManager.js';
+import { TooltipManager } from './ui/TooltipManager.js';
+import { tourSteps } from './config/tourSteps.js';
 
 // Expose d3 globally for PanelManager
 window.d3 = d3;
@@ -198,6 +201,8 @@ class App {
         this.deploymentPersistence = null;
         this.motionUploadUI = null;
         this.motionLibraryGalleryUI = null;
+        this.guidedTourManager = null;
+        this.tooltipManager = null;
     }
 
     /**
@@ -370,8 +375,17 @@ class App {
             this.sampleLoader = new SampleLoader(this.fileHandler, null);
             this.sampleLoader.initializeSampleSelectors();
 
+            // Initialize guided tour and tooltips
+            this.guidedTourManager = new GuidedTourManager();
+            this.guidedTourManager.initialize(tourSteps, (skipped) => {
+                console.log(skipped ? 'Tour skipped' : 'Tour completed');
+            });
+
+            this.tooltipManager = new TooltipManager();
+            this.tooltipManager.registerBulk(TooltipManager.getDefaultTooltips());
+
             // Initialize welcome modal
-            this.welcomeModal = new WelcomeModal(this.sampleLoader, this.fileHandler);
+            this.welcomeModal = new WelcomeModal(this.sampleLoader, this.fileHandler, this.guidedTourManager);
 
             // Initialize motion library UIs
             this.motionUploadUI = new MotionUploadUI();
@@ -379,6 +393,9 @@ class App {
 
             // Setup motion library panel toggles
             this.setupMotionLibraryToggles();
+
+            // Setup help button to restart tour
+            this.setupHelpButton();
 
             // Check if this is first visit
             const hasShownWelcome = localStorage.getItem('welcomeModalShown') === 'true';
@@ -482,6 +499,150 @@ class App {
                 galleryBtn.classList.toggle('active', this.motionLibraryGalleryUI.container?.style.display === 'flex');
             });
         }
+    }
+
+    setupHelpButton() {
+        const helpBtn = document.getElementById('help-button');
+        if (helpBtn && this.guidedTourManager) {
+            helpBtn.addEventListener('click', () => {
+                const menu = document.createElement('div');
+                menu.style.cssText = `
+                    position: fixed;
+                    top: 60px;
+                    right: 20px;
+                    background: rgba(17, 24, 39, 0.95);
+                    backdrop-filter: blur(12px);
+                    border: 1px solid rgba(96, 165, 250, 0.3);
+                    border-radius: 12px;
+                    padding: 8px;
+                    z-index: 10000;
+                    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+                    min-width: 200px;
+                `;
+
+                const menuItems = [
+                    { text: '🎯 Start Guided Tour', action: () => this.guidedTourManager.replay() },
+                    { text: '📚 Documentation', action: () => window.open('https://github.com/your-repo/robot-viewer', '_blank') },
+                    { text: '⌨️ Keyboard Shortcuts', action: () => this.showKeyboardShortcuts() }
+                ];
+
+                menuItems.forEach(item => {
+                    const btn = document.createElement('button');
+                    btn.textContent = item.text;
+                    btn.style.cssText = `
+                        width: 100%;
+                        padding: 12px 16px;
+                        background: transparent;
+                        color: white;
+                        border: none;
+                        border-radius: 6px;
+                        cursor: pointer;
+                        font-size: 14px;
+                        text-align: left;
+                        transition: background 0.2s;
+                    `;
+                    btn.addEventListener('mouseenter', () => {
+                        btn.style.background = 'rgba(96, 165, 250, 0.1)';
+                    });
+                    btn.addEventListener('mouseleave', () => {
+                        btn.style.background = 'transparent';
+                    });
+                    btn.addEventListener('click', () => {
+                        item.action();
+                        menu.remove();
+                    });
+                    menu.appendChild(btn);
+                });
+
+                const closeMenu = (e) => {
+                    if (!menu.contains(e.target) && e.target !== helpBtn) {
+                        menu.remove();
+                        document.removeEventListener('click', closeMenu);
+                    }
+                };
+
+                setTimeout(() => {
+                    document.addEventListener('click', closeMenu);
+                }, 100);
+
+                document.body.appendChild(menu);
+            });
+        }
+    }
+
+    showKeyboardShortcuts() {
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px);
+            z-index: 10001;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        `;
+
+        const content = document.createElement('div');
+        content.style.cssText = `
+            background: rgba(17, 24, 39, 0.95);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(96, 165, 250, 0.3);
+            border-radius: 16px;
+            padding: 32px;
+            max-width: 600px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            color: white;
+        `;
+
+        content.innerHTML = `
+            <h2 style="margin: 0 0 24px 0; color: #60a5fa; font-size: 24px;">Keyboard Shortcuts</h2>
+            <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 16px; margin-bottom: 24px;">
+                <div style="font-weight: 600; color: #60a5fa;">Camera</div>
+                <div></div>
+                <div>Left Click + Drag</div>
+                <div>Rotate camera</div>
+                <div>Right Click + Drag</div>
+                <div>Pan camera</div>
+                <div>Scroll</div>
+                <div>Zoom in/out</div>
+
+                <div style="font-weight: 600; color: #60a5fa; margin-top: 16px;">Tour Navigation</div>
+                <div></div>
+                <div>→ / ←</div>
+                <div>Next/Previous step</div>
+                <div>ESC</div>
+                <div>Skip tour</div>
+            </div>
+            <button id="shortcuts-close" style="
+                width: 100%;
+                padding: 12px;
+                background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+                color: white;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+                font-size: 14px;
+                font-weight: 600;
+            ">Close</button>
+        `;
+
+        modal.appendChild(content);
+        document.body.appendChild(modal);
+
+        content.querySelector('#shortcuts-close').addEventListener('click', () => {
+            modal.remove();
+        });
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
+        });
     }
 
     /**

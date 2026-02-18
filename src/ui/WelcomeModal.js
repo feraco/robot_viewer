@@ -1,9 +1,11 @@
 export class WelcomeModal {
-  constructor(sampleLoader, fileHandler) {
+  constructor(sampleLoader, fileHandler, tourManager = null) {
     this.sampleLoader = sampleLoader;
     this.fileHandler = fileHandler;
+    this.tourManager = tourManager;
     this.modal = null;
     this.hasShown = localStorage.getItem('welcomeModalShown') === 'true';
+    this.shouldStartTour = false;
   }
 
   show() {
@@ -96,6 +98,21 @@ export class WelcomeModal {
         ">Browse All Samples</button>
       </div>
 
+      <button id="welcome-take-tour" style="
+        width: 100%;
+        padding: 14px;
+        background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        margin-bottom: 12px;
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+      ">Take a Guided Tour 🎯</button>
+
       <button id="welcome-skip-btn" style="
         width: 100%;
         padding: 12px;
@@ -182,6 +199,21 @@ export class WelcomeModal {
       this.close();
     });
 
+    content.querySelector('#welcome-take-tour').addEventListener('click', () => {
+      this.shouldStartTour = true;
+      this.close();
+    });
+
+    const takeTourBtn = content.querySelector('#welcome-take-tour');
+    takeTourBtn.addEventListener('mouseenter', (e) => {
+      e.target.style.transform = 'translateY(-2px)';
+      e.target.style.boxShadow = '0 6px 16px rgba(59, 130, 246, 0.4)';
+    });
+    takeTourBtn.addEventListener('mouseleave', (e) => {
+      e.target.style.transform = 'translateY(0)';
+      e.target.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.3)';
+    });
+
     content.querySelector('#welcome-skip-btn').addEventListener('click', () => {
       this.close();
     });
@@ -218,6 +250,13 @@ export class WelcomeModal {
         this.modal.parentNode.removeChild(this.modal);
       }
       this.modal = null;
+
+      if (this.shouldStartTour && this.tourManager) {
+        setTimeout(() => {
+          this.tourManager.start();
+        }, 500);
+      }
+      this.shouldStartTour = false;
     }, 300);
   }
 
