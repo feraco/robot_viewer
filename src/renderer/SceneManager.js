@@ -487,11 +487,12 @@ export class SceneManager {
         const distance = maxDim / (2 * Math.tan(fov / 2)) * 2.5;
 
         // Position camera directly in front (facing robot)
-        // In global coordinates: looking from positive Y direction (front)
+        // In global coordinates: looking from negative Z direction (front)
+        // Y is up, so we keep that the same
         const cameraPosition = new THREE.Vector3(
             center.x,
-            center.y + distance,  // Front of robot
-            center.z + distance * 0.3  // Slightly elevated
+            center.y + maxDim * 0.3,  // Slightly elevated
+            center.z - distance  // In front (negative Z)
         );
 
         this.camera.position.copy(cameraPosition);

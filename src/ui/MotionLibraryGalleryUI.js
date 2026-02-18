@@ -471,6 +471,11 @@ export class MotionLibraryGalleryUI {
         console.log('Motion data parsed:', motionData);
         this.motionController.loadMotion(motionData, false);
         console.log('Motion loaded to controller');
+
+        // Position camera in front of robot for optimal viewing
+        if (this.motionController.sceneManager) {
+          this.motionController.sceneManager.positionCameraInFrontOfRobot();
+        }
       } else {
         throw new Error('Motion controller not available');
       }
