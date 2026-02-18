@@ -402,6 +402,7 @@ export class CSVMotionUI {
         ? null
         : this.elements.robotType.value;
 
+      const { CSVMotionLoader } = await import('../loaders/CSVMotionLoader.js');
       const motionData = await CSVMotionLoader.loadFromText(csvText, motionFile, robotType);
 
       for (let i = 0; i < repeatCount; i++) {
