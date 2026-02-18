@@ -442,16 +442,20 @@ export class MotionLibraryGalleryUI {
 
     try {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      console.log('Supabase URL:', supabaseUrl);
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-      if (!supabaseUrl) {
-        throw new Error('VITE_SUPABASE_URL not configured');
+      if (!supabaseUrl || !supabaseAnonKey) {
+        throw new Error('Supabase configuration not available');
       }
 
       const proxyUrl = `${supabaseUrl}/functions/v1/fetch-motion?url=${encodeURIComponent(motion.file_url)}`;
-      console.log('Fetching from proxy:', proxyUrl);
-      const response = await fetch(proxyUrl);
-      console.log('Response status:', response.status, response.statusText);
+      const response = await fetch(proxyUrl, {
+        headers: {
+          'Authorization': `Bearer ${supabaseAnonKey}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
       if (!response.ok) {
         const errorText = await response.text();
         console.error('Error response:', errorText);
