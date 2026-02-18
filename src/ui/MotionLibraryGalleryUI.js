@@ -54,7 +54,10 @@ export class MotionLibraryGalleryUI {
         align-items: center;
         background: rgba(40, 40, 40, 0.8);
       ">
-        <h3 style="margin: 0; font-size: 16px; font-weight: 600;">Motion Library</h3>
+        <div>
+          <h3 style="margin: 0; font-size: 16px; font-weight: 600;">Motion Library</h3>
+          <p id="motionLibrarySubtitle" style="margin: 4px 0 0 0; font-size: 11px; color: #999;">Loading...</p>
+        </div>
         <div style="display: flex; gap: 8px;">
           <button class="panel-minimize-btn" data-panel-id="floating-motion-gallery-panel"
             style="background: transparent; border: none; color: white; cursor: pointer;
@@ -228,11 +231,32 @@ export class MotionLibraryGalleryUI {
       this.motions = await MotionLibraryService.getAllMotions();
       console.log('Loaded motions:', this.motions.length);
       console.log('Categories:', [...new Set(this.motions.map(m => m.category))]);
+      this.updateCategoryCounts();
       this.filterMotions();
     } catch (error) {
       console.error('Failed to load motions:', error);
       this.renderError(error.message);
     }
+  }
+
+  updateCategoryCounts() {
+    const categoryCounts = {
+      all: this.motions.length,
+      walking: this.motions.filter(m => m.category === 'walking').length,
+      sports: this.motions.filter(m => m.category === 'sports').length,
+      dance: this.motions.filter(m => m.category === 'dance').length,
+      combat: this.motions.filter(m => m.category === 'combat').length,
+    };
+
+    console.log('Category counts:', categoryCounts);
+
+    const categoryButtons = this.container.querySelectorAll('.category-filter-btn');
+    categoryButtons.forEach(btn => {
+      const category = btn.getAttribute('data-category');
+      const count = categoryCounts[category] || 0;
+      const originalText = btn.textContent.split('(')[0].trim();
+      btn.innerHTML = `${originalText} <span style="opacity: 0.6; font-size: 10px;">(${count})</span>`;
+    });
   }
 
   filterMotions() {
@@ -254,7 +278,20 @@ export class MotionLibraryGalleryUI {
     this.filteredMotions = filtered;
     this.renderedCards.clear();
     console.log('Filtered motions:', this.filteredMotions.length);
+    this.updateSubtitle();
     this.render();
+  }
+
+  updateSubtitle() {
+    const subtitle = this.container?.querySelector('#motionLibrarySubtitle');
+    if (!subtitle) return;
+
+    const categoryName = this.selectedCategory === 'all' ? 'All Categories' :
+      this.selectedCategory.charAt(0).toUpperCase() + this.selectedCategory.slice(1);
+
+    const searchText = this.searchQuery ? ` • Search: "${this.searchQuery}"` : '';
+
+    subtitle.textContent = `${this.filteredMotions.length} motions in ${categoryName}${searchText}`;
   }
 
   render() {

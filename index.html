@@ -551,6 +551,35 @@
             border-radius: 21px;
             box-shadow: var(--glass-shadow);
             z-index: 100;
+            max-width: 95vw;
+            overflow-x: auto;
+            overflow-y: hidden;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+        }
+
+        #top-control-bar::-webkit-scrollbar {
+            height: 4px;
+        }
+
+        #top-control-bar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        #top-control-bar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 2px;
+        }
+
+        #top-control-bar::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .control-bar-section {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
             max-width: calc(100vw - 40px);
             transition: all 0.4s var(--spring);
         }
@@ -651,6 +680,60 @@
 
         .tool-button.active:active {
             transform: scale(0.98);
+        }
+
+        /* Responsive toolbar adjustments */
+        @media screen and (max-width: 1400px) {
+            .tool-button {
+                padding: 5px 10px;
+                font-size: 10px;
+            }
+
+            .control-bar-divider {
+                margin: 0 4px;
+            }
+        }
+
+        @media screen and (max-width: 1200px) {
+            .tool-button {
+                padding: 5px 8px;
+                font-size: 10px;
+            }
+
+            #top-control-bar {
+                gap: 4px;
+                padding: 4px 8px;
+            }
+
+            .control-bar-section {
+                gap: 4px;
+            }
+        }
+
+        @media screen and (max-width: 900px) {
+            .tool-button-text {
+                display: none;
+            }
+
+            .tool-button {
+                padding: 6px;
+                min-width: 32px;
+            }
+
+            .tool-button::before {
+                font-size: 14px;
+            }
+
+            #toggle-files-panel::before { content: '📁'; }
+            #toggle-joints-panel::before { content: '🔧'; }
+            #toggle-model-tree::before { content: '🌳'; }
+            #toggle-joint-graph::before { content: '📊'; }
+            #open-editor-btn::before { content: '✏️'; }
+            #toggle-deploy-panel::before { content: '📋'; }
+            #toggle-motion-gallery::before { content: '📚'; }
+            #toggle-motion-upload::before { content: '⬆️'; }
+            #help-button::before { content: '❓'; }
+            #language-toggle::before { content: '🌐'; }
         }
 
         /* Drop zone */
