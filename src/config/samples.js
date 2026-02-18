@@ -8,11 +8,6 @@ export const SAMPLE_MODELS = [
     name: 'Unitree G1 (23 DOF)',
     url: './g1/g1_23dof.xml',
     type: 'xml'
-  },
-  {
-    name: 'Simple Car',
-    url: './car/car.xml',
-    type: 'xml'
   }
 ];
 
