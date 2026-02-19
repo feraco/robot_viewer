@@ -483,15 +483,7 @@ class App {
     }
 
     setupMotionLibraryToggles() {
-        const uploadBtn = document.getElementById('toggle-motion-upload');
         const galleryBtn = document.getElementById('toggle-motion-gallery');
-
-        if (uploadBtn && this.motionUploadUI) {
-            uploadBtn.addEventListener('click', () => {
-                this.motionUploadUI.toggle();
-                uploadBtn.classList.toggle('active', this.motionUploadUI.container?.style.display === 'block');
-            });
-        }
 
         if (galleryBtn && this.motionLibraryGalleryUI) {
             galleryBtn.addEventListener('click', () => {
